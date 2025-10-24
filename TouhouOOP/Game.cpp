@@ -61,7 +61,7 @@ void Game::HandleRound() {
 	te2 = GetTickCount();
 
 	// 1️⃣ 检查是否清空且尚未等待
-	if (round.checkEnemyClear() && !wait) {
+	if (e.checkEnemyClear(enemy1) && !wait) {
 		wait = true;       
 		te1 = te2;         
 		recordRound++;
@@ -69,13 +69,13 @@ void Game::HandleRound() {
 
 	// 2️⃣ 等待 2 秒后再重置并生成新敌人
 	if (wait && te2 - te1 >= 2000) {
-		round.InitRound();  
-		round.EnemyX();
-		round.EnemyNum();
-		round.Init();
+		e.InitRound();  
+		e.EnemyX();
+		e.EnemyNum();
+		e.Init();
 		wait = false;
 	}
-	round.createEnemy();
-	round.move(2.8f);
-	round.collision(bulletList);
+	e.createEnemy(enemy1);
+	e.move(2.8f, enemy1);
+	e.collision(bulletList, enemy1);
 }	

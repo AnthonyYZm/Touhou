@@ -2,9 +2,9 @@
 #define GAME_H
 #include "Library.h"
 #include "Hero.h"	
-#include "EnemyRule.h"	
 #include "Bullet.h"
 #include "Screen.h"
+#include "Enemy.h"
 
 class Game {
 
@@ -14,7 +14,8 @@ class Game {
 	bool enemyFire;
 	bool wait;
 	Screen scr;
-	EnemyRule round;
+	Enemy e;
+	Enemy enemy1[15];
 	Hero hero;
 	std::vector<Bullet> bulletList;
 	

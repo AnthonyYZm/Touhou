@@ -33,9 +33,6 @@
     <ClCompile Include="Role.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="EnemyRule.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="Screen.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -54,9 +51,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Game.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="EnemyRule.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Bullet.h">
