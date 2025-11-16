@@ -29,8 +29,10 @@ public:
 	void EnemyNum(); //set round's enemyNum
 	void Init();
 	void enemyInit();
-	void createEnemy(Enemy* enemy);
-	void move(float speed, Enemy* enemy);
+	void normalEnemy(Enemy* enemy);
+	void createEnemy(int type, Enemy* enemy);
+	void move1(float speed, Enemy* enemy);
+	void move(int type, Enemy* enemy);
 	bool checkEnemyClear(Enemy* enemy);
 	void InitRound();
 	void collision(std::vector<Bullet>& bullets, Enemy* enemy);

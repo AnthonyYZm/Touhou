@@ -28,7 +28,5 @@ public:
 
 	void putimagePNG(int x, int y, int w, int h, IMAGE* srcImg, int sx, int sy);
 
-	void score(int idx);
-
 };
 #endif

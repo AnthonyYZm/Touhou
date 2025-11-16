@@ -23,11 +23,8 @@ public:
 	IMAGE hero;
 
 	void draw() override;
-
 	void move();
-	
 	void control(float speed);
-
 	void JudgePoint();	
 
 };

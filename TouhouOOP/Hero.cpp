@@ -10,7 +10,7 @@ Hero::Hero(float _x, float _y) : Role(_x, _y, 1) {
 	col = 0;
 	row = 0;
 	JudgeR = 6; //Judge point ÅÐ¶¨µã
-	Speed = 4.0f; 
+	Speed = 4.5f; 
 	//Hero frame rate
 	th1 = GetTickCount();
 	th2 = 0;

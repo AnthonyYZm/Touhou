@@ -10,10 +10,10 @@
 #include <conio.h>
 #include <easyx.h>
 #include <vector>
-#define WIDTH 759
-#define HEIGHT 886
-#define screenWidth 1280
-#define screenHeight 960
-#define LeftEdge 32
-#define TopEdge 16
+const int WIDTH = 759;
+const int HEIGHT = 886;
+const int screenWidth = 1280;
+const int screenHeight = 960;
+const int LeftEdge = 32;
+const int TopEdge = 16;
 #endif

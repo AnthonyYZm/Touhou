@@ -16,15 +16,11 @@ public:
 	bool Alive;
 
 	Bullet(float _x = 0, float _y = 0);
-
 	void draw() override;
-
 	void move();
 
 	float getBulletX() { return bulletX; }
-
 	float getBulletY() { return bulletY; }
-
 	bool isAlive() { return alive; }	
 
 };

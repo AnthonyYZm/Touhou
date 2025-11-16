@@ -63,9 +63,9 @@ void Enemy::Init(Enemy* enemy) {
 	clear = false;
 }
 
-void Enemy::createEnemy(Enemy* enemy) {
+void Enemy::normalEnemy(Enemy* enemy) {
 	t2 = GetTickCount();
-	if (t2 - t1 >= 800 && aliveEnemy < getEnemyNum()) {
+	if (t2 - t1 >= 1000 && aliveEnemy < getEnemyNum()) {
 		enemy[aliveEnemy].x = getEnemyX();
 		enemy[aliveEnemy].y = 0;
 		enemy[aliveEnemy].alive = true;
@@ -77,7 +77,18 @@ void Enemy::createEnemy(Enemy* enemy) {
 	}
 }
 
-void Enemy::move(float speed, Enemy* enemy) {
+void Enemy::createEnemy(int type, Enemy* enemy) {
+	switch (type) {
+		case 1:
+			normalEnemy(enemy);
+			break;
+		case 2:
+			//to be continued
+			break;
+	}
+}
+
+void Enemy::move1(float speed, Enemy* enemy) {
 	for (int i = 0; i < aliveEnemy; i++) {
 		if (enemy[i].y <= HEIGHT / 3 + 16) {
 			enemy[i].y += speed;
@@ -99,6 +110,16 @@ void Enemy::move(float speed, Enemy* enemy) {
 				enemy[i].x -= speed;
 			}
 		}
+	}
+}
+
+void Enemy::move(int type, Enemy* enemy) {
+	switch (type)
+	{
+		case 1:
+			move1(4.0f, enemy);
+		break;	default:
+		break;
 	}
 }
 
