@@ -17,6 +17,7 @@ class Enemy : public Role {
 	int aliveEnemy;
 	bool isfire;
 	bool clear;
+	int n;
 	DWORD t1, t2;
 	IMAGE enemy1;	
 
