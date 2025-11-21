@@ -1,18 +1,30 @@
-#ifndef BARRAGE_H
-#define BARRAGE_H	
+#pragma once	
 #include "Role.h"
 #include "Enemy.h"
 
 class Barrage : public Role{
-	int aliveBarr1;
-	int speed;
+	float speed;
+	float radian;	
 	DWORD t1, t2;
+	IMAGE barr1;
+	
 public:
 	Barrage(float _x = 0, float _y = 0);
 	void draw() override;
-	void createBarrage(std::vector<Barrage>& barr, Enemy* enemy);
-	void move();
+	void Normal(Enemy* enemy, Enemy* E);
+	/*
+	 * Barrages move by straight lines	
+	 * gap: time gap between each round bullet
+	 * angle : 
+	 * num : number of bullets in one round
+	 */
+	void Straight(Enemy* enemy, int gap, float speed, float &angle);
+	void Straight(Enemy* enemy, int gap, int x0, int y0, float speed, float &angle, int num);
 
-	bool isAlive() { return alive; }	
+	void Windmill(Enemy* enemy, int bladeNum);
+	void move();
+	bool isAlive() const { return alive; }	
+	std::vector<Barrage> barr1List;
+	std::vector<Barrage> barr2List;	
 };
-#endif
+

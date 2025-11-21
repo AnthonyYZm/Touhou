@@ -1,5 +1,4 @@
-#ifndef SCREEN_H
-#define SCREEN_H
+#pragma once
 #include "Library.h"
 class Screen {
 
@@ -13,4 +12,3 @@ public:
 	void gameScreen();	
 	void gameBackground();
 };
-#endif

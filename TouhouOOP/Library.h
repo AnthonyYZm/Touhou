@@ -1,19 +1,21 @@
-#ifndef LIBRARY_H
-#define LIBRARY_H
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <random>
 #include <windows.h>
-//#include <graphics.h> 
+#include <graphics.h> 
 #include <conio.h>
-#include <easyx.h>
+//#include <easyx.h>
 #include <vector>
-const int WIDTH = 759;
-const int HEIGHT = 886;
-const int screenWidth = 1280;
-const int screenHeight = 960;
-const int LeftEdge = 32;
-const int TopEdge = 16;
-#endif
+#include <chrono>
+unsigned const int WIDTH = 750;
+unsigned const int HEIGHT = 900;
+unsigned const int screenWidth = 1280;
+unsigned const int screenHeight = 960;
+unsigned const int LeftEdge = 32;
+unsigned const int TopEdge = 30;
+unsigned const int CentralX = 375;
+unsigned const int CentralY = 250;
+const float PI = 3.14159f;

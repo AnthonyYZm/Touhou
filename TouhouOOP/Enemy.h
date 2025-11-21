@@ -1,49 +1,43 @@
-#ifndef ENEMY_H
-#define ENEMY_H
+#pragma once
 #include "Role.h"
 #include "Bullet.h"
 
 class Enemy : public Role {
 
-	int type; //round enemy type
+	unsigned int type; //round enemy type
 	int col;
 	int frame;
 	int row;
-	int enemyWidth;	
-	int enemyHeight;
 	float enemyX;
 	float enemyY;
-	int enemyNum;
-	int aliveEnemy;
+	unsigned int enemyNum; //round's enemyNum
+	unsigned int aliveEnemy;
+	unsigned int enemyIdx;
 	bool isfire;
 	bool clear;
-	int n;
-	DWORD t1, t2;
-	IMAGE enemy1;	
+	DWORD t1, t2, te1, te2;
+	IMAGE enemy1, enemy2;	
 
 public:
 	Enemy(float _x = 0, float _y = 0, int _hp = 1);
 
 	void draw() override;
-	void Init(Enemy* enemy);
+	void draw2();	
 	void EnemyX(); //set round's enemyX
 	void EnemyNum(); //set round's enemyNum
-	void Init();
-	void enemyInit();
-	void normalEnemy(Enemy* enemy);
-	void createEnemy(int type, Enemy* enemy);
+	void createEnemy(eType type, Enemy* enemy);
 	void move1(float speed, Enemy* enemy);
-	void move(int type, Enemy* enemy);
-	bool checkEnemyClear(Enemy* enemy);
+	void move2(float speed, Enemy* enemy);	
+	void move(eType type, Enemy* enemy, float speed);
+	bool checkEnemyClear();
 	void InitRound();
-	void collision(std::vector<Bullet>& bullets, Enemy* enemy);
+	void collision(eType type, Bullet* bullet, Enemy* enemy);
 	
-	bool isFire() { return isfire; }
-	float getEnemyX() { return enemyX; }
-	int getEnemyNum() { return enemyNum; }
-	bool isAlive() { return alive; }
-	int GetAliveEnemy() { return aliveEnemy; }
+	bool isFire() const { return isfire; }
+	float getEnemyX() const { return enemyX; }
+	int getEnemyNum() const { return enemyNum; }
+	bool isAlive() const { return alive; }
+	int GetAliveEnemy() const { return aliveEnemy; }
 
 };
 
-#endif

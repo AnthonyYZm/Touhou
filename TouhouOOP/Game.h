@@ -1,6 +1,5 @@
-#ifndef GAME_H
-#define GAME_H
-#include "Library.h"
+#pragma once
+#include "Role.h"
 #include "Hero.h"	
 #include "Bullet.h"
 #include "Screen.h"
@@ -9,21 +8,21 @@
 
 class Game {
 
-	int round;	
-	int aliveBullet;
-	int barrageType;
-	int enemyType;
-	bool heroFire;
+	unsigned int round;	
+	//int barrageType;
+	//int enemyType;
+	unsigned int bulletLevel;	
 	bool enemyFire;
 	bool wait;
 	Screen scr;
 	Enemy e;
-	Enemy enemy1[15];
+	Enemy enemy1[10];
+	Enemy enemy2;
 	Hero hero;
-	Barrage barr1;	
-	std::vector<Barrage> barr1List;
-	std::vector<Bullet> bulletList;
-	
+	Barrage barr;	
+	Bullet B;
+	std::vector<Enemy*> NormalEnemies;
+	Enemy* Boss1 = nullptr;
 	/*te : Enemy rate
 	 *tb : Bullet rate
 	 *tba: Barrage rate	
@@ -33,12 +32,13 @@ class Game {
 
 public:
 	Game();
+
 	void Touhou();
 	void HandleRound();
-	void createBullet();	
-	void creatBarrage(Enemy* enemy, int type);
-
-	int getEnemyType(int e);
-	int getBarrageType(int r);	
+	void Bullets();	
+	void HeroControl();	
+	void Barrages(Enemy* enemy, bType type);
+	void Enemies(eType type);
+	void clearRoundEnemy();	
 };
-#endif
+

@@ -1,5 +1,4 @@
-#ifndef HERO_H
-#define HERO_H
+#pragma once
 #include "Role.h"
 
 class Hero : public Role {
@@ -28,4 +27,3 @@ public:
 	void JudgePoint();	
 
 };
-#endif
