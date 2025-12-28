@@ -1,7 +1,12 @@
 #pragma once
 #include "Role.h"
 #include "Bullet.h"
+#include <map>
 
+/// <summary>
+/// @brief Enemy class
+/// @details Inherited from Role class, represents enemy characters
+/// </summary>
 class Enemy : public Role {
 
 	unsigned int type; //round enemy type
@@ -19,19 +24,21 @@ class Enemy : public Role {
 	IMAGE enemy1, enemy2;	
 
 public:
+
 	Enemy(float _x = 0, float _y = 0, int _hp = 1);
+
+	static std::map<eType, float> speedMap; 
 
 	void draw() override;
 	void draw2();	
 	void EnemyX(); //set round's enemyX
 	void EnemyNum(); //set round's enemyNum
-	void createEnemy(eType type, Enemy* enemy);
-	void move1(float speed, Enemy* enemy);
-	void move2(float speed, Enemy* enemy);	
-	void move(eType type, Enemy* enemy, float speed);
-	bool checkEnemyClear();
+	void createEnemy(const eType& type, std::vector<Enemy*>& list);
+	void move(const eType& type, std::vector<Enemy*>& list, float speed);
+	void resetTimers();
 	void InitRound();
-	void collision(eType type, Bullet* bullet, Enemy* enemy);
+	bool checkEnemyClear();
+	bool collision(const eType& type, Bullet* bullet, std::vector<Enemy*>& list);
 	
 	bool isFire() const { return isfire; }
 	float getEnemyX() const { return enemyX; }
@@ -39,5 +46,10 @@ public:
 	bool isAlive() const { return alive; }
 	int GetAliveEnemy() const { return aliveEnemy; }
 
+	// count: 这一波怪的总数
+	// interval: 出怪间隔
+	void SetStatus(int count, int interval) {
+		enemyNum = count;
+	}
 };
 

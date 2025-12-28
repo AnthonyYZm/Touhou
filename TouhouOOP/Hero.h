@@ -1,6 +1,10 @@
 #pragma once
 #include "Role.h"
 
+/// <summary>
+///	@brief Hero class
+/// @details Inherited from Role class, represents the player's character
+/// </summary>
 class Hero : public Role {
 
 	int row;
@@ -10,9 +14,8 @@ class Hero : public Role {
 	int frame;
 	int JudgeR;
 	float Speed;
-	/*th:  hero frame rate 
-	* tb : bullet fire rate
-	*/
+	//th:  hero frame rate 
+	//tb : bullet fire rate
 	DWORD th1, th2; 
 
 public:

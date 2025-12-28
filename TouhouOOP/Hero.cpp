@@ -1,7 +1,5 @@
 #include "Hero.h"
 
-
-
 Hero::Hero(float _x, float _y) : Role(_x, _y, 1) {
 	loadimage(&hero, L"resource/hero/Reimu.png");
 	heroWidth = 32;
@@ -25,7 +23,7 @@ void Hero::draw() {
 	int sy = 0;
 	if (GetAsyncKeyState(VK_LEFT)) { sy = 49; }
 	else if (GetAsyncKeyState(VK_RIGHT)) { sy = 98; }
-	putimagePNG(x, y, heroWidth, heroHeight, &hero, sx, sy); 
+	putimagePNG((int)x, (int)y, heroWidth, heroHeight, &hero, sx, sy);
 	if (th2 - th1 > 80) {
 		row = (row + 1) % frame;
 	th1 = th2;
@@ -35,7 +33,7 @@ void Hero::draw() {
 void Hero::JudgePoint() {
 	setlinecolor(RED);
 	setfillcolor(WHITE);
-	fillcircle(x + heroWidth / 2, y + heroHeight / 2, JudgeR);	
+	fillcircle((int)(x + heroWidth / 2), (int)(y + heroHeight / 2), JudgeR);
 	// For collision detection, use the point (x + heroWidth/2, y + heroHeight - JudgeR)
 	// This point is located at the bottom center of the hero sprite
 }	
@@ -72,8 +70,8 @@ void Hero::move() {
 	}
 
 	if (x <= LeftEdge) x = LeftEdge;
-	if (x >= WIDTH - heroWidth) x = WIDTH - heroWidth;
+	if (x >= WIDTH - heroWidth) x = (float)(WIDTH - heroWidth);
 	if (y <= TopEdge) y = TopEdge;
-	if (y >= HEIGHT - heroHeight) y = HEIGHT - heroHeight;
+	if (y >= HEIGHT - heroHeight) y = (float)(HEIGHT - heroHeight);
 }
 

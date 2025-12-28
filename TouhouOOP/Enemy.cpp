@@ -9,10 +9,10 @@
 		- Draw
 		- 1 HP
 */
-
-/*
-	???Combine barragies functions with enemy class later
-*/
+std::map<eType, float> Enemy::speedMap = {
+	{eType::normal, 4.5f},
+	{eType::elf, 4.5f}
+};
 
 Enemy::Enemy(float _x, float _y, int _hp) : Role(_x, _y, _hp) {
 	loadimage(&enemy1, L"resource/enemy/enemy.png");
@@ -49,7 +49,7 @@ void Enemy::draw() {
 	int sx = row * 32.5f;
 	int sy = 322;
 	frame = 4;
-	putimagePNG(x, y, 32.5f, 27.0f, &enemy1, sx, sy);
+	putimagePNG((int)x, (int)y, 32.5f, 27.0f, &enemy1, sx, sy);
 	if (te2 - te1 > 80) {
 		row = (row + 1) % frame;
 		te1 = te2;
@@ -61,47 +61,51 @@ void Enemy::draw2() {
 	int sx = row * 64;
 	int sy = 454;
 	frame = 5;
-	putimagePNG(x, y, 64, 50, &enemy1, sx, sy);
+	putimagePNG((int)x, (int)y, 64, 50, &enemy1, sx, sy);
 	if (te2 - te1 > 80) {
 		row = (row + 1) % frame;
 		te1 = te2;
 	}
 }
 
-void Enemy::createEnemy(eType type, Enemy* enemy) {
+void Enemy::createEnemy(const eType& type, std::vector<Enemy*>& list) {
 	t2 = GetTickCount();
 	switch (type) {
 		case eType::normal:
-			/*Creat normal enemy*/
+			// Creat normal enemy
 		{
 			if (t2 - t1 >= 1000 && enemyIdx < getEnemyNum()) {
-				enemy[enemyIdx].x = getEnemyX();
-				enemy[enemyIdx].y = 0;
-				enemy[enemyIdx].alive = true;
-				enemy[enemyIdx].hp = 1;
+				Enemy* newEnemy = new Enemy();
+				newEnemy->x = enemyX;
+				newEnemy->y = TopEdge;
+				newEnemy->alive = true;
+				newEnemy->hp = 1;
+				list.push_back(newEnemy);
 				enemyIdx++;
 				aliveEnemy++;	
 				clear = false;	
 				t1 = t2;
 			}
-			for (int i = 0; i < enemyIdx; i++) {
-				if (enemy[i].alive) enemy[i].draw();
+			for (auto& e : list) {
+				if (e->alive) e->draw();
 			}
 			break;
 		}
 		case eType::elf:
-			/*Boss 1*/
+			// Boss 1
 		{
 			if (clear) {
-				enemy->x = WIDTH * 0.5 + LeftEdge;
-				enemy->y = TopEdge;
-				enemy->alive = true;
-				enemy->hp = 10;
+				Enemy* elfEnemy = new Enemy();
+				elfEnemy->x = WIDTH * 0.5f + LeftEdge;
+				elfEnemy->y = TopEdge;
+				elfEnemy->alive = true;
+				elfEnemy->hp = 10;
+				list.push_back(elfEnemy);
 				aliveEnemy = 1;
 				clear = false;
 			}
-			if (enemy->alive) {
-				enemy->draw2();
+			for (auto& elf : list) {
+				elf->draw2();
 			}
 			break;
 		}
@@ -110,47 +114,45 @@ void Enemy::createEnemy(eType type, Enemy* enemy) {
 	}
 }
 
-void Enemy::move1(float speed, Enemy* enemy) {
-	for (int i = 0; i < enemyIdx; i++) {
-		if (enemy[i].y <= HEIGHT / 3 + 16) {
-			enemy[i].y += speed;
-			(getEnemyX() <= WIDTH / 2 + 32) ? enemy[i].x += (speed * 0.5) : enemy[i].x -= (speed * 0.5);
-		}
-		if (getEnemyX() <= WIDTH / 2 + 32 && enemy[i].y > HEIGHT / 3 + 16) {
-			if (enemy[0].x <= WIDTH / 3 * 2 + 32 && i == 0) {
-				enemy[0].x += speed;
-			}
-			if (i > 0 && (enemy[i].x <= enemy[i - 1].x - 50)) {
-				enemy[i].x += speed;
-			}
-		}
-		else if (getEnemyX() > WIDTH / 2 + 32 && enemy[i].y > HEIGHT / 3 + 16) {
-			if (enemy[0].x >= WIDTH / 3 + 32 && i == 0) {
-				enemy[0].x -= speed;
-			}
-			if (i > 0 && (enemy[i].x >= enemy[i - 1].x + 50)) {
-				enemy[i].x -= speed;
-			}
-		}
-	}
-}
-
-void Enemy::move2(float speed, Enemy* enemy) {
-	//Boss 1 movement
-	if (enemy->y <= CentralY) {
-		enemy->y += speed;
-	}
-}
-
-void Enemy::move(eType type, Enemy* enemy, float speed) {
+void Enemy::move(const eType& type, std::vector<Enemy*>& list, float speed) {
 	switch (type)
 	{
 	case eType::normal:
-		move1(speed, enemy);
-		break;	
+	{
+		for (size_t i = 0; i < list.size(); i++) {
+			Enemy* cur = list[i];
+			if (cur->y <= HEIGHT / 3 + 16) {
+				cur->y += speed;
+				(getEnemyX() <= WIDTH / 2 + 32) ? cur->x += (speed * 0.5f) : cur->x -= (speed * 0.5f);
+			}
+			if (getEnemyX() <= WIDTH / 2 + 32 && cur->y > HEIGHT / 3 + 16) {
+				if (list[0]->x <= WIDTH / 3 * 2 + 32 && i == 0) {
+					list[0]->x += speed;
+				}
+				if (i > 0 && (cur->x <= list[i - 1]->x - 50)) {
+					cur->x += speed;
+				}
+			}
+			else if (getEnemyX() > WIDTH / 2 + 32 && cur->y > HEIGHT / 3 + 16) {
+				if (list[0]->x >= WIDTH / 3 + 32 && i == 0) {
+					list[0]->x -= speed;
+				}
+				if (i > 0 && (cur->x >= list[i - 1]->x + 50)) {
+					cur->x -= speed;
+				}
+			}
+		}
+	}
+	break;
+		
 	case eType::elf:
-		move2(speed, enemy);
+		for (auto* elf : list) {
+			if (elf->y <= CentralY) {
+				elf->y += speed;
+			}
+		}
 		break;
+
 	default:
 		break;
 	}
@@ -161,44 +163,51 @@ bool Enemy::checkEnemyClear() {
 	else return false;
 }
 
-void Enemy::collision(eType type, Bullet* bullet, Enemy* enemy) {
+bool Enemy::collision(const eType& type, Bullet* bullet, std::vector<Enemy*>& list) {
+	bool hitAny = false;
 	for (auto& b : bullet->bulletList) {
-		if (b.alive) {
-			switch (type)
-			{
-			case eType::normal:
-			{
-				for (int j = 0; j < enemyIdx; j++) {
-					if (enemy[j].alive && b.x >= enemy[j].x && b.x <= enemy[j].x + 32 &&
-						b.y >= enemy[j].y - 27 && b.y <= enemy[j].y) {
-						enemy[j].hp--;
-						b.alive = false;
-						if (enemy[j].hp <= 0) {
-							enemy[j].alive = false;
-							aliveEnemy--;
+		if (b->alive) {
+			for (auto it = list.begin(); it != list.end();) {
+				Enemy* enemy = *it;
+				bool hit = false;	
+
+				switch (type)
+				{
+					case eType::normal:
+						if (enemy->alive && b->x >= enemy->x && b->x <= enemy->x + 32 &&
+							b->y >= enemy->y - 27 && b->y <= enemy->y) {
+							hit = true;
 						}
-					}
+					break;
+
+					case eType::elf:
+						if (enemy->alive && b->x >= enemy->x && b->x <= enemy->x + 64 &&
+							b->y >= enemy->y - 50 && b->y <= enemy->y) {
+							hit = true;
+						}
+					break;
+
+				default:
+					break;
 				}
-				break;
-			}
-			case eType::elf:
-			{
-				if (enemy->alive && b.x >= enemy->x - 15 && b.x <= enemy->x + 15 &&
-					b.y >= enemy->y - 15 && b.y <= enemy->y + 15) {
+
+				if (hit) {
 					enemy->hp--;
-					b.alive = false;
+					b->alive = false;
 					if (enemy->hp <= 0) {
 						enemy->alive = false;
 						aliveEnemy--;
+						hitAny = true;
+						delete enemy;
+						it = list.erase(it); // erase 返回下一个有效的迭代器
+						continue; // 继续下一次循环，不执行 ++it
 					}
 				}
-				break;
-			}
-			default:
-				break;
+				++it;
 			}
 		}
 	}
+	return hitAny;
 }
 
 void Enemy::InitRound() {

@@ -2,6 +2,10 @@
 #include "Role.h"
 #include "Hero.h"
 
+/// <summary>
+/// @brief Bullet class
+/// @details Inherited from Role class, represents bullets fired by the hero
+/// </summary>
 class Bullet : public Role {
 	float bulletX;
 	float bulletY;
@@ -15,14 +19,16 @@ class Bullet : public Role {
 	std::chrono::milliseconds fire_cd{ 100 };
 
 public:
+	std::vector<Bullet*> bulletList;
 
-	std::vector<Bullet> bulletList;
 	Bullet(float _x = 0, float _y = 0);
+	~Bullet();
+
 	void draw() override;
 	void move();
 	void createBullet(Hero* hero, int type);
-	float getBulletX() { return bulletX; }
-	float getBulletY() { return bulletY; }
+	float getBulletX() const { return bulletX; }
+	float getBulletY() const { return bulletY; }
 	bool isAlive() const { return alive; }
 	void setFire(bool f) { fire = f; }
 };

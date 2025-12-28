@@ -1,13 +1,19 @@
 ﻿#include "Game.h"
-	
+
+int Game::bulletLevel = 1;
 
 Game::Game() {
-	te1 = 0;
-	te2 = 0;
 	enemyFire = false;
-	round = 0;
 	wait = false;	
 	bulletLevel = 1;
+	InitLevels();
+}
+
+Game::~Game() {
+	for (auto* e : enemies) {
+		delete e;
+	}
+	enemies.clear();
 }
 
 void Game::Touhou() {
@@ -17,6 +23,7 @@ void Game::Touhou() {
 	while (IsWindow(GetHWnd())) {
 		cleardevice();
 		//scr.gameBackground();
+		
 		//Game logic
 		HandleRound();
 		Bullets();
@@ -24,8 +31,52 @@ void Game::Touhou() {
 		FlushBatchDraw();
 		Sleep(1);
 	}
+
 	EndBatchDraw();
 	closegraph();
+}
+
+void Game::HandleRound() {
+	DWORD now = GetTickCount();
+
+	if (E.checkEnemyClear() && !wait) {
+		wait = true;
+		waitStart = now;
+
+		// 确保 vector 是空的
+		for (auto* ptr : enemies) {
+			delete ptr;
+		}
+		enemies.clear();
+
+		// 胜利检测，暂时空置
+		if (waveQueue.empty()) {
+		}
+
+		// 取出下一波配置
+		currentWave = waveQueue.front();
+		waveQueue.pop();
+		E.InitRound();
+		E.EnemyX();
+		E.EnemyNum();
+		E.SetStatus(currentWave.enemyCount, currentWave.interval);
+	}
+
+	if (wait) {
+		if (now - waitStart >= (DWORD)currentWave.waveDelay) wait = false;
+		else return;
+	}
+	Enemies(enemies);
+	Barrages(enemies);
+}
+
+void Game::InitLevels() {
+	// Initialize enemy configurations for each round
+	// 参数顺序:      敌人类型,          弹幕类型,     数量 出怪间隔 波次前间隔
+	waveQueue.push({ eType::elf,    bType::windmill_st, 1,     0,      2000 }); 
+	waveQueue.push({ eType::elf,    bType::windmill_st, 1,     0,      2000 }); 
+	waveQueue.push({ eType::normal, bType::down_st,     5,   1000,     2000 }); 
+	waveQueue.push({ eType::normal, bType::down_st,     5,   1000,     2000 }); 
 }
 
 void Game::HeroControl() {
@@ -40,17 +91,16 @@ void Game::Bullets() {
 	B.createBullet(&hero, bulletLevel);
 }
 
-void Game::Barrages(Enemy* enemy, bType type) {
-	switch (type) {
-		case bType::down_st:{
-			// Handle barrage type 1
-			barr.Normal(enemy, &e);
+void Game::Barrages(std::vector<Enemy*>& enemyList) {
+	switch (currentWave.barrageType) {
+		case bType::down_st:
+			barr.Normal(enemyList, &E);
 			break;
-		}
 		case bType::windmill_st:{
-			// Handle barrage type 2
 			static float angle = 90.0f;
-			barr.Straight(enemy, 50, 5.0f, angle);
+			for (auto* en : enemyList) {
+				if(en->isAlive()) barr.Straight(en, 50, 5.0f, angle);
+			}
 			break;
 		}
 		default:
@@ -58,73 +108,14 @@ void Game::Barrages(Enemy* enemy, bType type) {
 	}
 }
 
-void Game::Enemies(eType type) {
-	switch (type) {
-	case eType::normal: {
-		e.createEnemy(eType::normal, enemy1);
-		e.move(eType::normal, enemy1, 4.5f);
-		e.collision(eType::normal, &B, enemy1);
-		break;
-	}
-	case eType::elf: {
-		e.createEnemy(eType::elf, &enemy2);
-		e.move(eType::elf, &enemy2, 3.0f);
-		e.collision(eType::elf ,&B, &enemy2);
-		break;
-	}
-	default:
-		break;
-	}
+void Game::Enemies(std::vector<Enemy*>& enemyList) {
+	E.createEnemy(currentWave.type, enemyList);
+	E.move(currentWave.type, enemyList, Enemy::speedMap[currentWave.type]);
+	E.collision(currentWave.type, &B, enemyList);
 }
 
-void Game::HandleRound() {
-	te2 = GetTickCount();
 
-	if (e.checkEnemyClear() && !wait) {
-		wait = true;
-		te1 = te2;
-		clearRoundEnemy();
-	}
 
-	if (wait) {
-		if (te2 - te1 >= 2000) {
-			e.InitRound();
-			e.EnemyX();
-			e.EnemyNum();
-			wait = false;
-			te1 = GetTickCount();
-			round++;
-		}
-		else {
-			return;
-		}
-	}
 
-	switch (round) {
-		case 1:
-			Enemies(eType::elf);
-			Barrages(&enemy2, bType::windmill_st);
-			break;
-		case 2:
-			Enemies(eType::elf);
-			Barrages(&enemy2, bType::windmill_st);
-			break;
-		case 3:
-			Enemies(eType::normal);
-			Barrages(enemy1, bType::down_st);
-			break;
-		default:
-			Enemies(eType::normal);
-			Barrages(enemy1, bType::down_st);
-			break;
-	}
-}	
 
-void Game::clearRoundEnemy() {
-	// 2. 清理 Boss (currentBoss)
-	if (Boss1 != nullptr) {
-		delete Boss1; // 释放内存
-		Boss1 = nullptr; // 将指针设为 nullptr
-	}
-}
 	

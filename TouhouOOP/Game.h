@@ -5,40 +5,47 @@
 #include "Screen.h"
 #include "Enemy.h"
 #include "Barrage.h"
+#include <queue>
+
+
+// Enemy config
+struct enemyData {
+	eType type;
+	bType barrageType;
+	int enemyCount; // 一波刷多少敌人
+	int interval;   // 敌人刷新的时间间隔
+	int waveDelay; // 开始刷新的延迟时间
+};
 
 class Game {
 
-	unsigned int round;	
-	//int barrageType;
-	//int enemyType;
-	unsigned int bulletLevel;	
+	static int bulletLevel;
 	bool enemyFire;
 	bool wait;
 	Screen scr;
-	Enemy e;
-	Enemy enemy1[10];
-	Enemy enemy2;
+	Enemy E; // manager
 	Hero hero;
 	Barrage barr;	
 	Bullet B;
-	std::vector<Enemy*> NormalEnemies;
-	Enemy* Boss1 = nullptr;
-	/*te : Enemy rate
-	 *tb : Bullet rate
-	 *tba: Barrage rate	
-	 */
-	DWORD te1, te2, tb1, tb2, tba1, tba2;
 
+	std::vector<Enemy*> enemies;
+	std::queue<enemyData> waveQueue; // 使用队列管理波次
+	enemyData currentWave;
+
+	DWORD waitStart;
 
 public:
 	Game();
+	~Game();
 
 	void Touhou();
+	void InitLevels();
 	void HandleRound();
+
 	void Bullets();	
 	void HeroControl();	
-	void Barrages(Enemy* enemy, bType type);
-	void Enemies(eType type);
-	void clearRoundEnemy();	
+
+	void Barrages(std::vector<Enemy*>& enemyList);
+	void Enemies(std::vector<Enemy*>& enemyList);
 };
 

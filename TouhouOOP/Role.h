@@ -21,8 +21,9 @@ public:
 		y = _y;
 	}
 
+    virtual ~Role() {}
 	virtual void draw() = 0;
-	
+	 
 	//virtual void move() = 0;
 };
 

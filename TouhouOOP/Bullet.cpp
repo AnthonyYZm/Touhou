@@ -11,8 +11,15 @@ Bullet::Bullet(float _x, float _y) : Role(_x, _y) {
 	fire = false;	
 }
 
+Bullet::~Bullet() {
+	for (auto* b : bulletList) {
+		delete b;
+	}
+	bulletList.clear();
+}
+
 void Bullet::draw() {
-	putimagePNG(x, y, bulletWidth, bulletHeight, &bullet1, 34, 133);
+	putimagePNG((int)x, (int)y, bulletWidth, bulletHeight, &bullet1, 34, 133);
 }
 
 void Bullet::move() {
@@ -28,22 +35,27 @@ void Bullet::createBullet(Hero* hero, int type) {
 	{
 	case 1:
 		if (now >= next_fire && fire) {
-			Bullet Bullet(hero->x + 16, hero->y);
-			Bullet.alive = true;
-			bulletList.push_back(Bullet);
+			Bullet* newBullet = new Bullet(hero->x + 16, hero->y);
+			newBullet->alive = true;
+			bulletList.push_back(newBullet); 
 			next_fire = now + fire_cd;
 		}
 		fire = false;
-		for (auto& b : bulletList) {
-			if (b.isAlive()) {
-				b.draw();
-				b.move();
+
+		for (auto it = bulletList.begin(); it != bulletList.end(); ) {
+			Bullet* b = *it;
+			if (b->isAlive()) {
+				b->move();
+				b->draw();
+			}
+			if (!b->isAlive()) {
+				delete b;
+				it = bulletList.erase(it);
+			}
+			else {
+				++it;
 			}
 		}
-		bulletList.erase(
-			std::remove_if(bulletList.begin(), bulletList.end(),
-				[](const Bullet& b) { return !b.isAlive(); }),
-			bulletList.end());
 		//printf("Bullet List Size: %d\n", bulletList.size());
 		break;
 
