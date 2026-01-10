@@ -10,19 +10,15 @@ Game::Game() {
 }
 
 Game::~Game() {
-	for (auto* e : enemies) {
-		delete e;
-	}
-	enemies.clear();
 }
 
 void Game::Touhou() {
-	scr.gameScreen();
+	Scr.gameScreen();
 	BeginBatchDraw();
 
 	while (IsWindow(GetHWnd())) {
 		cleardevice();
-		//scr.gameBackground();
+		//Scr.gameBackground();
 		
 		//Game logic
 		HandleRound();
@@ -43,12 +39,6 @@ void Game::HandleRound() {
 		wait = true;
 		waitStart = now;
 
-		// 确保 vector 是空的
-		for (auto* ptr : enemies) {
-			delete ptr;
-		}
-		enemies.clear();
-
 		// 胜利检测，暂时空置
 		if (waveQueue.empty()) {
 		}
@@ -57,63 +47,83 @@ void Game::HandleRound() {
 		currentWave = waveQueue.front();
 		waveQueue.pop();
 		E.InitRound();
-		E.EnemyX();
-		E.EnemyNum();
-		E.SetStatus(currentWave.enemyCount, currentWave.interval);
+		E.SetStatus(currentWave.position, currentWave.interval);
 	}
 
 	if (wait) {
 		if (now - waitStart >= (DWORD)currentWave.waveDelay) wait = false;
 		else return;
 	}
-	Enemies(enemies);
-	Barrages(enemies);
+	Enemies();
+	Barrages();
 }
 
 void Game::InitLevels() {
 	// Initialize enemy configurations for each round
-	// 参数顺序:      敌人类型,          弹幕类型,     数量 出怪间隔 波次前间隔
-	waveQueue.push({ eType::elf,    bType::windmill_st, 1,     0,      2000 }); 
-	waveQueue.push({ eType::elf,    bType::windmill_st, 1,     0,      2000 }); 
-	waveQueue.push({ eType::normal, bType::down_st,     5,   1000,     2000 }); 
-	waveQueue.push({ eType::normal, bType::down_st,     5,   1000,     2000 }); 
+	/* 参数顺序:  
+	*   敌人类型, 
+	*	弹幕类型, 
+	*	间隔  
+	*	等待      
+	*	敌人
+	*/
+	waveQueue.push({ 
+		eType::elf,    
+		bType::windmill_st, 
+		0,     
+		2000,     
+		{CentralX} 
+	});
+	waveQueue.push({
+		eType::elf,
+		bType::windmill_st,
+		0,
+		2000,
+		{CentralX}
+	});
+	waveQueue.push({
+		eType::normal,
+		bType::down_st,
+		500,
+		2000,
+		{100.0f, 100.0f, 100.0f, 100.0f} 
+	});
 }
 
 void Game::HeroControl() {
-	hero.draw();
-	hero.move();
+	Hero.draw();
+	Hero.move();
 }
 
 void Game::Bullets() {
 	if (GetAsyncKeyState('Z') & 0x8000) {
 		B.setFire(true);	
 	}
-	B.createBullet(&hero, bulletLevel);
+	B.createBullet(&Hero, bulletLevel);
 }
 
-void Game::Barrages(std::vector<Enemy*>& enemyList) {
+void Game::Barrages() {
 	switch (currentWave.barrageType) {
 		case bType::down_st:
-			barr.Normal(enemyList, &E);
+			Barr.Normal(E.getList(), &E);
 			break;
 		case bType::windmill_st:{
 			static float angle = 90.0f;
-			for (auto* en : enemyList) {
-				if(en->isAlive()) barr.Straight(en, 50, 5.0f, angle);
-			}
+			Barr.straightMill(E.getList(), 50, 5.0f, angle);
 			break;
 		}
 		default:
 			break;
 	}
+	Barr.update();
 }
 
-void Game::Enemies(std::vector<Enemy*>& enemyList) {
-	E.createEnemy(currentWave.type, enemyList);
-	E.move(currentWave.type, enemyList, Enemy::speedMap[currentWave.type]);
-	E.collision(currentWave.type, &B, enemyList);
+void Game::Enemies() {
+	E.createEnemy(currentWave.type);
+	E.drawAll(currentWave.type);
+	E.move(currentWave.type, Enemy::speedMap[currentWave.type]);
+	E.collision(currentWave.type, &B);
 }
-
 
 
 

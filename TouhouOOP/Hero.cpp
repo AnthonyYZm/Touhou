@@ -1,9 +1,10 @@
 #include "Hero.h"
 
+int const Hero::heroWidth = 32;
+int const Hero::heroHeight = 45;
+
 Hero::Hero(float _x, float _y) : Role(_x, _y, 1) {
 	loadimage(&hero, L"resource/hero/Reimu.png");
-	heroWidth = 32;
-	heroHeight = 45;
 	frame = 8;
 	col = 0;
 	row = 0;

@@ -5,6 +5,7 @@
 #include "Screen.h"
 #include "Enemy.h"
 #include "Barrage.h"
+#include "EnemyManager.h"
 #include <queue>
 
 
@@ -12,9 +13,9 @@
 struct enemyData {
 	eType type;
 	bType barrageType;
-	int enemyCount; // 一波刷多少敌人
 	int interval;   // 敌人刷新的时间间隔
 	int waveDelay; // 开始刷新的延迟时间
+	std::vector<float> position;
 };
 
 class Game {
@@ -22,13 +23,12 @@ class Game {
 	static int bulletLevel;
 	bool enemyFire;
 	bool wait;
-	Screen scr;
-	Enemy E; // manager
-	Hero hero;
-	Barrage barr;	
+	Screen Scr;
+	EnemyManager E;
+	Hero Hero;
+	Barrage Barr;	
 	Bullet B;
 
-	std::vector<Enemy*> enemies;
 	std::queue<enemyData> waveQueue; // 使用队列管理波次
 	enemyData currentWave;
 
@@ -45,7 +45,7 @@ public:
 	void Bullets();	
 	void HeroControl();	
 
-	void Barrages(std::vector<Enemy*>& enemyList);
-	void Enemies(std::vector<Enemy*>& enemyList);
+	void Barrages();
+	void Enemies();
 };
 

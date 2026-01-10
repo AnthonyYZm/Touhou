@@ -1,11 +1,15 @@
 #include "Barrage.h"
 
+int const Barrage::darkGreenWidth = 24;
+int const Barrage::darkGreenHeight = 24;
+
 Barrage::Barrage(float _x, float _y) : Role(_x, _y) {
 	loadimage(&barr1, L"resource/barrage/mid_bullet_darkGreen.png");
 	t1 = 0;
 	t2 = 0;
 	speed = 4.0f;
 	alive = false;
+	currentAngle = 90.0f;
 }
 
 Barrage::~Barrage() {
@@ -19,8 +23,13 @@ Barrage::~Barrage() {
 	barr2List.clear();
 }
 
+void Barrage::reset() {
+	t1 = GetTickCount();
+	currentAngle = 90.0f;
+}
+
 void Barrage::draw() {
-	putimagePNG((int)x, (int)y, 24, 24, &barr1, 0, 0);
+	putimagePNG((int)x, (int)y, darkGreenWidth, darkGreenHeight, &barr1, 0, 0);
 }
 
 void Barrage::move() {
@@ -30,18 +39,38 @@ void Barrage::move() {
 }
 
 
-void Barrage::Normal(std::vector<Enemy*> enemy, Enemy* E) {
+void Barrage::Normal(std::vector<Enemy*>& enemyList, EnemyManager* E) {
 	t2 = GetTickCount();
-	if (E->getEnemyNum() == E->GetAliveEnemy() && t2 - t1 >= 1000) {
-		int cnt = E->GetAliveEnemy();
-		for (int i = 0; i < cnt; i++) {
-			if (!enemy[i]->isAlive()) continue;
-			Barrage* newBarrage = new Barrage(enemy[i]->x, enemy[i]->y + 20);
+	if (E->getAliveEnemy() && t2 - t1 >= 1000) {
+		for (auto* e : enemyList) {
+			if (!e->isAlive() || !e->fire) continue;
+			Barrage* newBarrage = new Barrage(e->x + Enemy::getNormalWidth() / 2 - darkGreenWidth / 2, e->y + Enemy::getNormalHeight() / 2 - darkGreenHeight / 2);
 			newBarrage->alive = true;
 			barr1List.push_back(newBarrage);
 		}
 		t1 = t2;
 	}
+
+}
+//straight
+
+void Barrage::straightMill(std::vector<Enemy*>& enemyList, int gap, float speed, float &angle) {
+	t2 = GetTickCount();
+	for (auto* e : enemyList) {
+		if (e->alive && e->fire && t2 - t1 >= gap) {
+			Barrage* newBarrage = new Barrage(e->x + Enemy::getElfWidth() / 2 - darkGreenWidth / 2, e->y + Enemy::getElfHeight() / 2 - darkGreenHeight / 2);
+			newBarrage->speed = speed;
+			newBarrage->radian = currentAngle * PI / 180.0f;
+			newBarrage->alive = true;
+			barr2List.push_back(newBarrage);
+			currentAngle += 8.0f;
+			t1 = t2;
+		}
+	}
+}
+
+void Barrage::update() {
+
 	for (auto it = barr1List.begin(); it != barr1List.end(); ) {
 		Barrage* b = *it;
 		if (b->isAlive()) {
@@ -59,22 +88,8 @@ void Barrage::Normal(std::vector<Enemy*> enemy, Enemy* E) {
 			++it;
 		}
 	}
-
 	//printf("Barrage List Size: %d\n", barr1List.size());
-}
-//straight
 
-void Barrage::Straight(Enemy* enemy, int gap, float speed, float &angle) {
-	t2 = GetTickCount();
-	if (enemy->alive && enemy->y >= CentralY && t2 - t1 >= gap) {
-		Barrage* newBarrage = new Barrage(enemy->x + 32, enemy->y + 25);
-		newBarrage->speed = speed;
-		newBarrage->radian = angle * PI / 180.0f;
-		newBarrage->alive = true;
-		barr2List.push_back(newBarrage);
-		angle += 8.0f;
-		t1 = t2;
-	}
 	for (auto it = barr2List.begin(); it != barr2List.end(); ) {
 		Barrage* b = *it;
 		if (b->isAlive()) {
@@ -93,15 +108,5 @@ void Barrage::Straight(Enemy* enemy, int gap, float speed, float &angle) {
 			++it;
 		}
 	}
-}
-
-//windmill
-void Barrage::Windmill(Enemy* enemy, int bladeNum) {
-	float R = 300.0f;
-	t2 = GetTickCount();
-	if (enemy->alive && enemy->y > HEIGHT / 3 && t2 - t1 >= 600) {
-		for (int i = 0; i < bladeNum; i++) {
-		}
-	}
-}
+}	
 

@@ -1,11 +1,12 @@
 #include "Bullet.h"
 
+int const Bullet::bulletWidth = 12;
+int const Bullet::bulletHeight = 14;
+
 Bullet::Bullet(float _x, float _y) : Role(_x, _y) {
 	loadimage(&bullet1, L"resource/bullet/bullet1.png");
 	t1 = 0;
 	t2 = 0;
-	bulletWidth = 12;
-	bulletHeight = 14;
 	speed = 6.5f;
 	alive = false;
 	fire = false;	
@@ -35,7 +36,7 @@ void Bullet::createBullet(Hero* hero, int type) {
 	{
 	case 1:
 		if (now >= next_fire && fire) {
-			Bullet* newBullet = new Bullet(hero->x + 16, hero->y);
+			Bullet* newBullet = new Bullet(hero->x + Hero::getHeroWidth() / 2, hero->y);
 			newBullet->alive = true;
 			bulletList.push_back(newBullet); 
 			next_fire = now + fire_cd;

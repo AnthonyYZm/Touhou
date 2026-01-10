@@ -9,8 +9,8 @@ class Hero : public Role {
 
 	int row;
 	int col;
-	int heroWidth;
-	int heroHeight;
+	static const int heroWidth;
+	static const int heroHeight;
 	int frame;
 	int JudgeR;
 	float Speed;
@@ -29,4 +29,6 @@ public:
 	void control(float speed);
 	void JudgePoint();	
 
+	static int getHeroWidth() { return heroWidth; }
+	static int getHeroHeight() { return heroHeight; }
 };

@@ -7,10 +7,9 @@
 /// @details Inherited from Role class, represents bullets fired by the hero
 /// </summary>
 class Bullet : public Role {
-	float bulletX;
-	float bulletY;
-	int bulletWidth;
-	int bulletHeight;
+
+	static const int bulletWidth;
+	static const int bulletHeight;
 	float speed;
 	DWORD t1, t2;
 	IMAGE bullet1;
@@ -27,10 +26,11 @@ public:
 	void draw() override;
 	void move();
 	void createBullet(Hero* hero, int type);
-	float getBulletX() const { return bulletX; }
-	float getBulletY() const { return bulletY; }
 	bool isAlive() const { return alive; }
 	void setFire(bool f) { fire = f; }
+
+	static int getBulletWidth() { return bulletWidth; }
+	static int getBulletHeight() { return bulletHeight; }
 };
 
 
