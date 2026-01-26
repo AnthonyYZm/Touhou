@@ -22,16 +22,14 @@ public:
 	EnemyManager();
 	~EnemyManager();
 
-	std::map<eType, float> speedMap;
-
 	void createEnemy(const eType& type);
-	void move(const eType& type, float speed);
+	void moveEnemy();
 	bool collision(const eType& type, Bullet* bullet);
 
 	void InitRound();
 	bool checkEnemyClear();
 	void SetStatus(const std::vector<float>& positions, int interval);
-	void drawAll(const eType& type); // 新增：负责遍历调用 Enemy->draw()
+	void drawAll(); // 新增：负责遍历调用 Enemy->draw()
 
 	std::vector<Enemy*>& getList() { return enemyList; }
 	int getAliveEnemy() const { return aliveEnemy; }

@@ -1,43 +1,59 @@
 #pragma once	
 #include "Role.h"
 #include "EnemyManager.h"
+#include <set>
 
 /// <summary>
 /// @brief Barrage class
 /// @details Inherited from Role class, represents enemy barrages
 /// </summary>
+
 class Barrage : public Role{
 private:
 	float speed;
+	float rSpeed;
 	float radian;	
 	float currentAngle;
+	float vx, vy;	
+	int moveType;
+	float omega;
+	float radius;
+	float centerX, centerY;
 	static const int darkGreenWidth;
 	static const int darkGreenHeight;
+	static int wheelGroup;
+	bool outBound;
 	DWORD t1, t2;
 	IMAGE barr1;
-	
+	static int globalGroupID;
+	int groupID;
+
 public:
 	Barrage(float _x = 0, float _y = 0);
 	~Barrage();
 	void draw() override;
-	void Normal(std::vector<Enemy*>& enemyList, EnemyManager* E);
+	void move() override;
+	void Normal(Enemy& e, float speed);
 	
 	//* Barrages move by straight lines	
 	//* gap: time gap between each round bullet
 	//* angle : 
 	//* num : number of bullets in one round
 	
-	void straightMill(std::vector<Enemy*>& enemyList, int gap, float speed, float &angle);
-	void straightMill(std::vector<Enemy*>& enemyList, int gap, int x0, int y0, float speed, float &angle, int num);
-	void Windmill(std::vector<Enemy*>& enemyList, int bladeNum);
-
-	void elfBarrage();
+	void straightMill(Enemy& e, float speed, int omega, int num, int x0, int y0, int dir);
+	void wheel(Enemy& e, float speed, float vl, int num, int x0, int y0);
+	void fireWork(Enemy& e, float speed, int num, int x0, int y0);
+	void circleMill(Enemy& e, float speed, int r, int num, int x0, int y0);
 
 	void update();
 	void reset();
-	void move();
+	void clearBarrage();
+	void collision();
 	bool isAlive() const { return alive; }	
-	std::vector<Barrage*> barr1List;
-	std::vector<Barrage*> barr2List;	
+	std::vector<Barrage*> barrList;
+
+	int getBarrageCount() const { return barrList.size(); }
+	static int getDarkGreenWidth() { return darkGreenWidth; }
+	static int getDarkGreenHeight() { return darkGreenHeight; }
 };
 

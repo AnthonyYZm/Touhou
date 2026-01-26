@@ -24,7 +24,7 @@ public:
 	~Bullet();
 
 	void draw() override;
-	void move();
+	void move() override;
 	void createBullet(Hero* hero, int type);
 	bool isAlive() const { return alive; }
 	void setFire(bool f) { fire = f; }

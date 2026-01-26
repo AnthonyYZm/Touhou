@@ -25,7 +25,7 @@ public:
 	IMAGE hero;
 
 	void draw() override;
-	void move();
+	void move() override;
 	void control(float speed);
 	void JudgePoint();	
 

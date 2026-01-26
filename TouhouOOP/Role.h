@@ -1,12 +1,53 @@
 #pragma once
 #include "Library.h"
 
+// Handle Type
+enum class eType : int {
+    normal = 0,
+    elf = 1
+};
+
+enum class bType : int {
+    down_st = 0,
+    windmill_st = 1,
+    firework = 2,
+	circle_mill = 3,
+    wheel = 4
+};
+
+// 弹幕任务结构体 
+struct BarrageTask {
+	int type;           // 弹幕类型 (对应 bType 枚举转 int)
+	DWORD lastTime;     // 上一次发射的时间
+	int interval;       // 发射间隔 (ms)
+
+	float speed;        // 速度
+	float omega;        // 角速度 或 半径参数
+	int num;            // 数量
+	int r;              // 半径 (用于wheel等)
+	int dir;            // 方向 (用于straightMill等)
+
+	// 构造函数
+	BarrageTask(int _type, int _interval, float _speed, float _omega, int _num, int _r = 0, int _dir = 1) {
+		type = _type;
+		interval = _interval;
+		speed = _speed;
+		omega = _omega;
+		num = _num;
+		r = _r;
+		dir = _dir;
+		lastTime = 0;
+	}
+};
+
+
 class Role {
 public:
 
 	float x, y;
 	int hp;
-	bool alive, fire;
+	bool alive, fire, lock;
+	eType type;
 
 	Role(float _x, float _y, int _hp) {
 		x = _x;
@@ -19,27 +60,17 @@ public:
 	Role(float _x, float _y) {
 		x = _x;
 		y = _y;
+        alive = true;
+        fire = false;
 	}
 
     virtual ~Role() {}
 	virtual void draw() = 0;
-	 
-	//virtual void move() = 0;
-};
-
-/*Handle Type*/
-enum class eType : int {
-    normal = 0,
-    elf = 1
-};
-
-enum class bType : int {
-    down_st = 0,
-    windmill_st = 1
+    virtual void move() = 0;
 };
 
 
-/*Put images*/
+// Put images
 
 inline void putimagePNG(int x, int y, int w, int h, IMAGE* srcImg, int sx, int sy)
 {

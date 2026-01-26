@@ -9,10 +9,9 @@
 /// </summary>
 class Enemy : public Role {
 
-	unsigned int type; //round enemy type
-	int col, frame, row;
 	float enemyX;
 	float enemyY;
+	float vx, vy;
 
 	static const int normalWidth;
 	static const int normalHeight;
@@ -26,30 +25,36 @@ public:
 
 	Enemy(float _x = 0, float _y = 0, int _hp = 1);
 
+	int col, frame, row, sx, sy;
+	int width, height;
+	
+
 	static std::map<eType, float> speedMap; 
+	std::vector<BarrageTask> tasks;
 
 	void draw() override;
+	void move() override;
 	void draw2();	
-	void createEnemy(const eType& type, std::vector<Enemy*>& list);
-	void move(const eType& type, std::vector<Enemy*>& list, float speed);
 	void InitRound();
 	bool checkEnemyClear();
-	bool collision(const eType& type, Bullet* bullet, std::vector<Enemy*>& list);
 	bool isFire() const { return fire; }
 	bool isAlive() const { return alive; }
 
 	void EnemyX(); //set round's enemyX
-	void EnemyNum(); //set round's enemyNum
-	void resetTimers();
-	// count: 这一波怪的总数
-	// interval: 出怪间隔
 
+	// 添加任务
+	void AddTask(BarrageTask task) { tasks.push_back(task); }
+	void ClearTasks() {	tasks.clear(); }
+	std::vector<BarrageTask>& GetTasks() { return tasks; }
 
 	static int getNormalWidth() { return normalWidth; }
 	static int getNormalHeight() { return normalHeight; }
 	static int getElfWidth() { return elfWidth; }
 	static int getElfHeight() { return elfHeight; }
 	float getEnemyX() const { return enemyX; }
+
+	void setVx(float _vx) { vx = _vx; };	
+	void setVy(float _vy) { vy = _vy; };
 
 };
 

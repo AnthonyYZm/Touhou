@@ -1,0 +1,26 @@
+# 忽略 Visual Studio 临时文件
+.vs/
+.vscode/
+
+# 忽略编译输出目录
+x64/
+Debug/
+Release/
+*/x64/
+*/Debug/
+*/Release/
+
+# 忽略具体生成的临时文件类型
+*.obj
+*.pdb
+*.idb
+*.tlog
+*.log
+*.ipch
+*.aps
+*.user
+*.suo
+*.opensdf
+*.sdf
+*.cache
+*.ilk

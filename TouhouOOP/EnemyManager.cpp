@@ -1,7 +1,5 @@
 #include "EnemyManager.h"
 
-
-
 EnemyManager::EnemyManager() {
 	aliveEnemy = 0; 
 	enemyIdx = 0;
@@ -32,13 +30,14 @@ void EnemyManager::createEnemy(const eType& type) {
 			newEnemy->y = TopEdge;
 			newEnemy->alive = true;
 			newEnemy->hp = 1;
+			newEnemy->type = eType::normal;
 			enemyList.push_back(newEnemy);
 			enemyIdx++;
 			aliveEnemy++;
 			clear = false;
 			t1 = t2;
+		}
 		break;
-	}
 	case eType::elf:
 		// Boss 1
 		if (clear) {
@@ -47,6 +46,8 @@ void EnemyManager::createEnemy(const eType& type) {
 			elfEnemy->y = TopEdge;
 			elfEnemy->alive = true;
 			elfEnemy->hp = 10;
+			elfEnemy->type = eType::elf;
+			elfEnemy->frame = 5;
 			enemyList.push_back(elfEnemy);
 			aliveEnemy = 1;
 			clear = false;
@@ -57,72 +58,95 @@ void EnemyManager::createEnemy(const eType& type) {
 	}
 }
 
-void EnemyManager::drawAll(const eType& type) {
-	for (auto* e : enemyList) {
+void EnemyManager::drawAll() {
+	for (auto it = enemyList.begin(); it != enemyList.end(); ) {
+		Enemy* e = *it;
+		if (!e->isAlive()) {
+			++it;
+			continue;
+		}
+		switch (e->type) {
+			case eType::normal:
+				e->sx = e->row * 32.5f;
+				e->sy = 322;
+				e->frame = 4;
+				e->width = Enemy::getNormalWidth();
+				e->height = Enemy::getNormalHeight();
+				break;
+			case eType::elf:
+				e->sx = e->row * 64;
+				e->sy = 454;
+				e->frame = 5;
+				e->width = Enemy::getElfWidth();
+				e->height = Enemy::getElfHeight();
+				break;
+			default:
+				break;
+			}
+		e->draw();
+		++it;	
+	}
+}
+
+ void EnemyManager::moveEnemy() {
+	for (auto it = enemyList.begin(); it != enemyList.end(); ++it) {
+		Enemy* e = *it;
 		if (!e->isAlive()) continue;
-		switch (type) {
+		eType type = e->type;
+		float speed = Enemy::speedMap[type];
+		switch (type)
+		{
 		case eType::normal:
-			e->draw();
-			break;
+		{
+			e->fire = true;
+			e->setVy(speed);
+			if (e->x < WIDTH / 2 + LeftEdge) {
+				e->setVx(speed * 0.5f);
+			}
+			else {
+				e->setVx(-speed * 0.5f);
+			}
+			/*
+			for (size_t i = 0; i < enemyList.size(); i++) {
+				float X = currentPosition[i];
+				Enemy* cur = enemyList[i];
+				if (cur->y <= HEIGHT / 3 + 16) {
+					cur->y += speed;
+					(getEnemyX() <= WIDTH / 2 + 32) ? cur->x += (speed * 0.5f) : cur->x -= (speed * 0.5f);
+				}
+				if (getEnemyX() <= WIDTH / 2 + 32 && cur->y > HEIGHT / 3 + 16) {
+					if (enemyList[0]->x <= WIDTH / 3 * 2 + 32 && i == 0) {
+						enemyList[0]->x += speed;
+					}
+					if (i > 0 && (cur->x <= enemyList[i - 1]->x - 50)) {
+						cur->x += speed;
+					}
+				}
+				else if (getEnemyX() > WIDTH / 2 + 32 && cur->y > HEIGHT / 3 + 16) {
+					if (enemyList[0]->x >= WIDTH / 3 + 32 && i == 0) {
+						enemyList[0]->x -= speed;
+					}
+					if (i > 0 && (cur->x >= enemyList[i - 1]->x + 50)) {
+						cur->x -= speed;
+					}
+				}
+			}*/
+		}
+		break;
 		case eType::elf:
-			e->draw2();
+			e->setVx(0);
+			if (e->y <= CentralY) {
+				e->setVy(speed);
+			}
+			else {
+				e->setVy(0);
+				e->fire = true;
+			}
 			break;
 		default:
 			break;
 		}
-	}
-}
-
-void EnemyManager::move(const eType& type, float speed) {
-	switch (type)
-	{
-	case eType::normal:
-		for (auto* e : enemyList) {
-			e->fire = true;
-			if (e->x < WIDTH / 2 + LeftEdge) {
-				e->y += speed;
-				e->x += speed * 0.5f;
-			}
-			else {
-				e->y += speed;
-				e->x -= speed * 0.5f;
-			}
-		}
-		/*
-		for (size_t i = 0; i < enemyList.size(); i++) {
-			float X = currentPosition[i];
-			Enemy* cur = enemyList[i];
-			if (cur->y <= HEIGHT / 3 + 16) {
-				cur->y += speed;
-				(getEnemyX() <= WIDTH / 2 + 32) ? cur->x += (speed * 0.5f) : cur->x -= (speed * 0.5f);
-			}
-			if (getEnemyX() <= WIDTH / 2 + 32 && cur->y > HEIGHT / 3 + 16) {
-				if (enemyList[0]->x <= WIDTH / 3 * 2 + 32 && i == 0) {
-					enemyList[0]->x += speed;
-				}
-				if (i > 0 && (cur->x <= enemyList[i - 1]->x - 50)) {
-					cur->x += speed;
-				}
-			}
-			else if (getEnemyX() > WIDTH / 2 + 32 && cur->y > HEIGHT / 3 + 16) {
-				if (enemyList[0]->x >= WIDTH / 3 + 32 && i == 0) {
-					enemyList[0]->x -= speed;
-				}
-				if (i > 0 && (cur->x >= enemyList[i - 1]->x + 50)) {
-					cur->x -= speed;
-				}
-			}
-		}*/
-	break;
-
-	case eType::elf:
-		for (auto* elf : enemyList) {
-			(elf->y <= CentralY) ? (elf->y += speed) : (elf->fire = true);
-		}
-		break;
-
-	default:
-		break;
+		e->move();
 	}
 }
 

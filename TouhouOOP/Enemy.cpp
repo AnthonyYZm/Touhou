@@ -12,7 +12,6 @@ std::map<eType, float> Enemy::speedMap = {
 
 Enemy::Enemy(float _x, float _y, int _hp) : Role(_x, _y, _hp) {
 	loadimage(&enemy1, L"resource/enemy/enemy.png");
-	type = 0;
 	hp = 1; 
 	col = 0; frame = 0; row = 0;
 	enemyX = 0; enemyY = 0;
@@ -26,14 +25,17 @@ void Enemy::EnemyX() { //set round's enemyX
 
 void Enemy::draw() {
 	te2 = GetTickCount();
-	int sx = row * 32.5f;
-	int sy = 322;
-	frame = 4;
-	putimagePNG((int)x, (int)y, normalWidth, normalHeight, &enemy1, sx, sy);
+	putimagePNG((int)x, (int)y, width, height, &enemy1, sx, sy);
 	if (te2 - te1 > 80) {
 		row = (row + 1) % frame;
 		te1 = te2;
 	}
+}
+
+void Enemy::move() {
+	if (!alive) return;
+	x += vx;
+	y += vy;
 }
 
 void Enemy::draw2() {
