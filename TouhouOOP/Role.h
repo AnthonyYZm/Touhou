@@ -12,7 +12,10 @@ enum class bType : int {
     windmill_st = 1,
     firework = 2,
 	circle_mill = 3,
-    wheel = 4
+    wheel = 4,
+	pincer_aim = 5,
+
+	combo_1 = 100
 };
 
 // 弹幕任务结构体 
@@ -55,6 +58,7 @@ public:
 		hp = _hp;
 		alive = true;
 		fire = false;
+		lock = false;
 	}
 
 	Role(float _x, float _y) {
@@ -62,6 +66,7 @@ public:
 		y = _y;
         alive = true;
         fire = false;
+		lock = false;
 	}
 
     virtual ~Role() {}

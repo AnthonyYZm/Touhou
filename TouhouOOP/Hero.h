@@ -29,6 +29,6 @@ public:
 	void control(float speed);
 	void JudgePoint();	
 
-	static int getHeroWidth() { return heroWidth; }
-	static int getHeroHeight() { return heroHeight; }
+	static int getWidth() { return heroWidth; }
+	static int getHeight() { return heroHeight; }
 };

@@ -36,7 +36,7 @@ void Bullet::createBullet(Hero* hero, int type) {
 	{
 	case 1:
 		if (now >= next_fire && fire) {
-			Bullet* newBullet = new Bullet(hero->x + Hero::getHeroWidth() / 2, hero->y);
+			Bullet* newBullet = new Bullet(hero->x + Hero::getWidth() / 2, hero->y);
 			newBullet->alive = true;
 			bulletList.push_back(newBullet); 
 			next_fire = now + fire_cd;

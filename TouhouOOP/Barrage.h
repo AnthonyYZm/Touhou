@@ -1,7 +1,6 @@
 #pragma once	
 #include "Role.h"
 #include "EnemyManager.h"
-#include <set>
 
 /// <summary>
 /// @brief Barrage class
@@ -35,15 +34,11 @@ public:
 	void move() override;
 	void Normal(Enemy& e, float speed);
 	
-	//* Barrages move by straight lines	
-	//* gap: time gap between each round bullet
-	//* angle : 
-	//* num : number of bullets in one round
-	
 	void straightMill(Enemy& e, float speed, int omega, int num, int x0, int y0, int dir);
 	void wheel(Enemy& e, float speed, float vl, int num, int x0, int y0);
 	void fireWork(Enemy& e, float speed, int num, int x0, int y0);
 	void circleMill(Enemy& e, float speed, int r, int num, int x0, int y0);
+	void pincerAim(Enemy& e, float targetX, float targetY, float speed, int spacing, int pairNum, int x0, int y0);
 
 	void update();
 	void reset();

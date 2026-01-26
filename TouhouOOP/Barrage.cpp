@@ -160,6 +160,35 @@ void Barrage::wheel(Enemy& e, float speed, float vl, int num, int x0, int y0) {
 	}
 }
 
+void Barrage::pincerAim(Enemy& e, float targetX, float targetY, float speed, int spacing, int pairNum, int x0, int y0) {
+	if (e.isAlive() && e.fire) {
+
+		float aimX = targetX + Hero::getWidth() / 2;
+		float aimY = targetY + Hero::getHeight() / 2;
+
+		for (int i = 1; i <= pairNum; ++i) {
+			// 当前的横向偏移量
+			int offset = i * spacing;
+			// 左侧子弹
+			Barrage* leftB = new Barrage(x0 - offset, y0); 
+			float angleL = atan2(aimY - y0, aimX - (x0 - offset)); 
+			leftB->vx = speed * cos(angleL);
+			leftB->vy = speed * sin(angleL);
+			leftB->alive = true;
+			leftB->moveType = 0; 
+			barrList.push_back(leftB);
+
+			// 右侧子弹
+			Barrage* rightB = new Barrage(x0 + offset, y0);
+			float angleR = atan2(aimY - y0, aimX - (x0 + offset)); 
+			rightB->vx = speed * cos(angleR);
+			rightB->vy = speed * sin(angleR);
+			rightB->alive = true;
+			rightB->moveType = 0; 
+			barrList.push_back(rightB);
+		}
+	}
+}
 void Barrage::update() {
 	// 1. 统计还活跃的组
 	std::set<int> groupsInside;

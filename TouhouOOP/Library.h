@@ -10,6 +10,7 @@
 //#include <easyx.h>
 #include <vector>
 #include <chrono>
+#include <set>
 const float WIDTH = 750.0f;
 const float HEIGHT = 900.0f;
 const float screenWidth = 1280.0f;

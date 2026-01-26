@@ -76,12 +76,11 @@ void Game::InitLevels() {
 	*/
 	waveQueue.push({
 		eType::elf,
-		bType::windmill_st,
+		bType::combo_1,
 		0,
 		2000,
-		4.0f,
+		0.0f,
 		{CentralX},
-		{4, 100, 5}
 	});
 	waveQueue.push({ 
 		eType::elf,    
@@ -124,27 +123,46 @@ void Game::Barrages() {
 		// 2. 如果敌人还没任务（刚生成），根据 wave 配置初始化任务
 		// 这是一个简单的 "配置 -> 任务" 映射器
 		if (en->GetTasks().empty()) {
-
-			// 示例：如果 wave 类型是 wheel，我们给它一个 "组合弹幕"
-			if (wave.barrageType == bType::wheel) {
-				// 任务1：螺旋弹幕 (间隔200ms, 速度2.0, 角速度0.05, 数量5)
-				en->AddTask(BarrageTask((int)bType::wheel, 200, 2.0f, 0.05f, 5));
-
-				// 任务2：同时每2秒发射一次直线狙击 (间隔2000ms, 速度5.0, 数量10)
-				en->AddTask(BarrageTask((int)bType::windmill_st, 2000, 5.0f, 10, 10));
-			}
+			switch (wave.barrageType) {
+			// 添加一个组合弹幕
+			case bType::combo_1:
+				en->AddTask(BarrageTask((int)bType::pincer_aim, 400, 6.0f, 0, 3, 80));
+				en->AddTask(BarrageTask((int)bType::firework, 3000, 4.0f, 0, 12));
+				break;
 			// 示例：普通敌人
-			else if (wave.barrageType == bType::down_st) {
+			case bType::down_st:
 				en->AddTask(BarrageTask((int)bType::down_st, 1000, 5.0f, 0, 1));
-			}
+				break;
 			// 默认兜底：直接把 wave 的参数转为一个任务
-			else {
+			default:
 				en->AddTask(BarrageTask((int)wave.barrageType, wave.param[1], wave.barrSpeed, wave.param[2], (int)wave.param[0], (int)wave.param[3]));
 			}
 		}
-
+		int centerX = (int)en->x + Enemy::getElfWidth() / 2 - Barrage::getDarkGreenWidth() / 2;
+		int centerY = (int)en->y + Enemy::getElfHeight() / 2 - Barrage::getDarkGreenHeight() / 2;
 		// 3. 执行任务
 		for (auto& task : en->GetTasks()) {
+			// 特殊绘制：pincer_aim 的挂载点
+			if (task.type == (int)bType::pincer_aim) {
+				// 保存旧颜色
+				COLORREF oldColor = getfillcolor();
+				setfillcolor(RED);
+
+				// 获取任务参数 (spacing存在task.r里, pairNum存在task.num里)
+				int spacing = task.r;
+				int pairNum = task.num;
+
+				// 绘制左右两边的挂载点
+				for (int i = 1; i <= pairNum; ++i) {
+					int offset = i * spacing;
+					fillcircle(centerX - offset, centerY, 4); // 左点
+					fillcircle(centerX + offset, centerY, 4); // 右点
+				}
+
+				// 恢复颜色
+				setfillcolor(oldColor);
+			}
+
 			// 检查时间间隔
 			if (now - task.lastTime >= task.interval) {
 
@@ -168,6 +186,9 @@ void Game::Barrages() {
 					break;
 				case bType::wheel:
 					Barr.wheel(*en, task.speed, task.omega, task.num, x, y);
+					break;
+				case bType::pincer_aim:
+					Barr.pincerAim(*en, Hero.x, Hero.y, task.speed, task.r, task.num, x, y);
 					break;
 				}
 
