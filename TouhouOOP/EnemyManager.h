@@ -11,6 +11,7 @@ struct SpawnEvent {
 	int startTime;        // 波次开始后的延迟(ms)
 	int count;            // 生成数量
 	int interval;         // 生成间隔(ms)
+	int hp;               // 生命值
 	eType type;           // 敌人外观类型
 	float startX, startY; // 起始位置
 	MoveStrategy moveLogic; // 移动策略
@@ -19,6 +20,11 @@ struct SpawnEvent {
 	// 如果是 Boss，直接传入 Boss 对象指针 (可选)
 	Boss* bossInstance = nullptr;
 
+};
+
+struct waveData {
+	int waveDelay; // 在开始这一波之前，需要等待多久 (ms)
+	std::vector<SpawnEvent> events;
 };
 
 class EnemyManager {
@@ -46,14 +52,15 @@ public:
 	EnemyManager();
 	~EnemyManager();
 
-	void createEnemy(const eType& type);
+	void updateSpawns();
+	void createEnemy(const SpawnEvent& ev);
 	void moveEnemy();
-	bool collision(const eType& type, Bullet* bullet);
-
+	bool collision(Bullet* bullet);
 	void InitRound();
 	bool checkEnemyClear();
-	void SetStatus(const std::vector<float>& positions, int interval);
-	void drawAll(); // 新增：负责遍历调用 Enemy->draw()
+	void clearEnemy();
+	void setWave(const std::vector<SpawnEvent>& event);
+	void drawAll(); 
 
 	std::vector<Enemy*>& getList() { return enemyList; }
 	int getAliveEnemy() const { return aliveEnemy; }

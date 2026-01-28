@@ -36,69 +36,59 @@ void Game::HandleRound() {
 	DWORD now = GetTickCount();
 
 	if (E.checkEnemyClear() && !wait) {
+		if (waveQueue.empty()) { 
+			return;
+		}
+		nextWave = waveQueue.front();
 		wait = true;
 		waitStart = now;
-
-		// 胜利检测，暂时空置
-		if (waveQueue.empty()) {
-		}
-
-		// 取出下一波配置
-		if (!waveQueue.empty()) {
-			wave = waveQueue.front();
+	}
+	
+	if (wait) {
+		if (now - waitStart >= (DWORD)nextWave.waveDelay) {
+			wait = false;
 			waveQueue.pop();
 			E.InitRound();
-			E.SetStatus(wave.position, wave.interval);
+			E.setWave(nextWave.events);
 		}
-	}
-	Barrages();
-	if (wait) {
-		if (now - waitStart >= (DWORD)wave.waveDelay) wait = false;
 		else return;
 	}
+	Barrages();
 	Enemies();
 }
 
 void Game::InitLevels() {
-	// Initialize enemy configurations for each round
-	/* 参数顺序:  
-	*   敌人类型, 
-	*	弹幕类型, 
-	*	间隔  
-	*	等待
-	*	弹幕速度
-	*	位置
-	* 	param[0]: number of bullets in firework barrage
-	*   param[1]: gap/time interval
-	*   param[2]: omega for windmill
-	*   param[3]: radius for circle mill
-	*	param[4]: linear velocity for wheel	
-	*/
-	waveQueue.push({
-		eType::elf,
-		bType::combo_1,
-		0,
-		2000,
-		0.0f,
-		{CentralX},
-	});
-	waveQueue.push({ 
-		eType::elf,    
-		bType::firework, 
-		0,     
-		2000, 
-		3.0f,
-		{CentralX},
-		{12, 200}
-	});
-	waveQueue.push({
-		eType::normal,
-		bType::down_st,
-		500,
-		2000,
-		5.0f,
-		{100.0f, 100.0f, 100.0f, 100.0f} 
-	});
+	// --- 第一波 (Wave 1) ---
+	{
+		waveData w1;
+		w1.waveDelay = 2000; // 第一波开始前等待 2 秒（或者是上一波结束后的间隔）
+
+		// 事件1配置...
+		SpawnEvent e1;
+		e1.startTime = 500; // 波次开始后 500ms 生成
+		e1.count = 5; 		// 生成 5 个敌人
+		e1.interval = 400;  // 每 400ms 生成一个
+		e1.type = eType::normal; // 普通敌人
+		e1.startX = 100; e1.startY = -50; // 起始位置
+		e1.moveLogic = Moves::SineWave(100, 50, 2.0f, 3.0f); // 设定移动逻辑
+		e1.initTasks.push_back(BarrageTask((int)bType::down_st, 500, 5.0f, 0, 1)); // 携带一个简单的下落弹幕任务
+
+		w1.events.push_back(e1); // 加入到 WaveData 的事件列表
+
+		// 事件2配置...
+		SpawnEvent e2;
+		e2.startTime = 2000;
+		e2.count = 3;
+		e2.interval = 600;
+		e2.type = eType::elf;
+		e2.startX = 400; e2.startY = -50;
+		e2.moveLogic = Moves::Linear(0, 2.0f);
+		e2.initTasks.push_back(BarrageTask((int)bType::windmill_st, 80, 4.0f, 3, 1));
+		w1.events.push_back(e2);
+
+		// 推入队列
+		waveQueue.push(w1);
+	}
 }
 
 void Game::HeroControl() {
@@ -120,10 +110,11 @@ void Game::Barrages() {
 	for (auto* en : E.getList()) {
 		if (!en->isAlive()) continue;
 
+		/*
 		// 2. 如果敌人还没任务（刚生成），根据 wave 配置初始化任务
 		// 这是一个简单的 "配置 -> 任务" 映射器
 		if (en->GetTasks().empty()) {
-			switch (wave.barrageType) {
+			switch (currentWave.barrageType) {
 			// 添加一个组合弹幕
 			case bType::combo_1:
 				en->AddTask(BarrageTask(
@@ -161,6 +152,8 @@ void Game::Barrages() {
 				en->AddTask(BarrageTask((int)wave.barrageType, wave.param[1], wave.barrSpeed, wave.param[2], (int)wave.param[0], (int)wave.param[3]));
 			}
 		}
+		*/
+
 		int centerX = (int)en->x + Enemy::getElfWidth() / 2 - Barrage::getDarkGreenWidth() / 2;
 		int centerY = (int)en->y + Enemy::getElfHeight() / 2 - Barrage::getDarkGreenHeight() / 2;
 		
@@ -247,10 +240,9 @@ void Game::Barrages() {
 }
 
 void Game::Enemies() {
-	E.createEnemy(wave.type);
-	E.drawAll();
 	E.moveEnemy();
-	E.collision(wave.type, &B);
+	E.drawAll();
+	E.collision(&B);
 }
 
 

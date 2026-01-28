@@ -7,19 +7,6 @@
 #include "Barrage.h"
 #include "EnemyManager.h"
 #include "Boss.h"
-#include <queue>
-
-
-// Enemy config
-struct enemyData {
-	eType type;
-	bType barrageType;
-	int interval;   // 敌人刷新的时间间隔
-	int waveDelay; // 开始刷新的延迟时间
-	float barrSpeed;
-	std::vector<float> position;
-	float param[10] = { 0 }; // 预留参数
-};
 
 class Game {
 
@@ -32,8 +19,9 @@ class Game {
 	Barrage Barr;	
 	Bullet B;
 
-	std::queue<enemyData> waveQueue; // 使用队列管理波次
-	enemyData wave;
+	std::queue<waveData> waveQueue;
+	std::vector<SpawnEvent> currentWave;
+	waveData nextWave;
 
 	DWORD waitStart;
 

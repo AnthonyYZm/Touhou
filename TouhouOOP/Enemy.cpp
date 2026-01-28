@@ -16,7 +16,7 @@ Enemy::Enemy(float _x, float _y, int _hp) : Role(_x, _y, _hp) {
 	col = 0; frame = 0; row = 0;
 	enemyX = 0; enemyY = 0;
     te1 = 0, te2 = 0;	
-	fire = false;
+	fire = true;
 	birthTime = GetTickCount();
 	mover = nullptr;	
 }
