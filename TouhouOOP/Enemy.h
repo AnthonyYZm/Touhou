@@ -2,16 +2,18 @@
 #include "Role.h"
 #include "Bullet.h"
 #include <map>
+#include <functional>
+
+class Enemy;	
+
+// 定义移动策略函数签名：接收 自身指针 和 存活时间(ms)
+using MoveStrategy = std::function<void(Enemy*, int)>;
 
 /// <summary>
 /// @brief Enemy class
 /// @details Inherited from Role class, represents enemy characters
 /// </summary>
 class Enemy : public Role {
-
-	float enemyX;
-	float enemyY;
-	float vx, vy;
 
 	static const int normalWidth;
 	static const int normalHeight;
@@ -21,25 +23,33 @@ class Enemy : public Role {
 	DWORD te1, te2;
 	IMAGE enemy1, Elf;	
 
+protected:
+
+	float enemyX;
+	float enemyY;
+	float vx, vy;
+
 public:
+
+	MoveStrategy mover; 
+	DWORD birthTime; 
 
 	Enemy(float _x = 0, float _y = 0, int _hp = 1);
 
 	int col, frame, row, sx, sy;
 	int width, height;
 	
-
 	static std::map<eType, float> speedMap; 
 	std::vector<BarrageTask> tasks;
 
 	void draw() override;
-	void move() override;
+	virtual void move() override;
 	void draw2();	
 	void InitRound();
 	bool checkEnemyClear();
 	bool isFire() const { return fire; }
 	bool isAlive() const { return alive; }
-
+	void setStrategy(MoveStrategy ms) { mover = ms; }	
 	void EnemyX(); //set round's enemyX
 
 	// 添加任务

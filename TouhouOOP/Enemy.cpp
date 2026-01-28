@@ -17,6 +17,8 @@ Enemy::Enemy(float _x, float _y, int _hp) : Role(_x, _y, _hp) {
 	enemyX = 0; enemyY = 0;
     te1 = 0, te2 = 0;	
 	fire = false;
+	birthTime = GetTickCount();
+	mover = nullptr;	
 }
 
 void Enemy::EnemyX() { //set round's enemyX
@@ -34,20 +36,17 @@ void Enemy::draw() {
 
 void Enemy::move() {
 	if (!alive) return;
-	x += vx;
-	y += vy;
-}
 
-void Enemy::draw2() {
-	te2 = GetTickCount();
-	int sx = row * 64;
-	int sy = 454;
+	// 计算存活时间
+	int t = GetTickCount() - birthTime;
 
-	frame = 5;
-	putimagePNG((int)x, (int)y, elfWidth, elfHeight, &enemy1, sx, sy);
-	if (te2 - te1 > 80) {
-		row = (row + 1) % frame;
-		te1 = te2;
+	// 如果配置了策略，执行策略
+	if (mover) {
+		mover(this, t);
+	}
+	else {
+		// [原有逻辑兜底] 
+		y += 2.0f; 
 	}
 }
 

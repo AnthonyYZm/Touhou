@@ -6,6 +6,7 @@
 #include "Enemy.h"
 #include "Barrage.h"
 #include "EnemyManager.h"
+#include "Boss.h"
 #include <queue>
 
 
@@ -49,5 +50,7 @@ public:
 
 	void Barrages();
 	void Enemies();
+	
+	void createBoss();	
 };
 

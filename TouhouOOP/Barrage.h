@@ -34,6 +34,7 @@ public:
 	void move() override;
 	void Normal(Enemy& e, float speed);
 	
+	void randomRain(float speed);
 	void straightMill(Enemy& e, float speed, int omega, int num, int x0, int y0, int dir);
 	void wheel(Enemy& e, float speed, float vl, int num, int x0, int y0);
 	void fireWork(Enemy& e, float speed, int num, int x0, int y0);

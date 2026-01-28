@@ -189,6 +189,17 @@ void Barrage::pincerAim(Enemy& e, float targetX, float targetY, float speed, int
 		}
 	}
 }
+
+void Barrage::randomRain(float speed) {
+	int rndX = rand() % (int(LeftEdge), int(screenWidth + LeftEdge - darkGreenWidth));
+	Barrage* newBarrage = new Barrage((float)rndX, TopEdge); // y 固定为 0
+	newBarrage->vx = 0;          
+	newBarrage->vy = speed;    
+	newBarrage->alive = true;
+	newBarrage->moveType = 0;    
+	barrList.push_back(newBarrage);
+}
+
 void Barrage::update() {
 	// 1. 统计还活跃的组
 	std::set<int> groupsInside;

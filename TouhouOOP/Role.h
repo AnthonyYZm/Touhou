@@ -14,6 +14,8 @@ enum class bType : int {
 	circle_mill = 3,
     wheel = 4,
 	pincer_aim = 5,
+	random_rain = 6,
+	pincer_rain = 7,
 
 	combo_1 = 100
 };
@@ -23,24 +25,36 @@ struct BarrageTask {
 	int type;           // 弹幕类型 (对应 bType 枚举转 int)
 	DWORD lastTime;     // 上一次发射的时间
 	int interval;       // 发射间隔 (ms)
-
 	float speed;        // 速度
+	float acc;			// 加速度 
 	float omega;        // 角速度 或 半径参数
 	int num;            // 数量
 	int r;              // 半径 (用于wheel等)
 	int dir;            // 方向 (用于straightMill等)
 
+	int burstCount;    // 连发次数 
+	int burstInterval; // 连发间隔
+	int currentBurst; // 当前连发计数	
+	DWORD lastBurstTime; // 上一发时间
+
 	// 构造函数
-	BarrageTask(int _type, int _interval, float _speed, float _omega, int _num, int _r = 0, int _dir = 1) {
-		type = _type;
-		interval = _interval;
-		speed = _speed;
-		omega = _omega;
-		num = _num;
-		r = _r;
-		dir = _dir;
-		lastTime = 0;
-	}
+    BarrageTask(int _type, int _interval, float _speed, float _omega, int _num, int _r = 0, int _dir = 1,
+        int _burstCount = 1, int _burstInterval = 0, float _speedDec = 0.0f) {
+        type = _type;
+        interval = _interval;
+        speed = _speed;
+        omega = _omega;
+        num = _num;
+        r = _r;
+        dir = _dir;
+        lastTime = 0;
+
+        burstCount = _burstCount;
+        burstInterval = _burstInterval;
+        acc = _speedDec;
+        currentBurst = 0;
+        lastBurstTime = 0;
+    }
 };
 
 
