@@ -12,49 +12,79 @@ EnemyManager::~EnemyManager() {
 	enemyList.clear();
 }
 
+
 void EnemyManager::setWave(const std::vector<SpawnEvent>& event) {
-	// 清空旧队列
 	std::queue<SpawnEvent> empty;
 	std::swap(eventQueue, empty);
+	activeEvents.clear(); // [新增] 清空活跃列表
 
-	// 填入新事件
 	for (const auto& ev : event) {
 		eventQueue.push(ev);
 	}
 
 	waveStartTime = GetTickCount();
-	processingEvent = false;
 	clear = false;
 }
 
 void EnemyManager::updateSpawns() {
-	if (clear && eventQueue.empty() && enemyList.empty()) return;
+	// 如果全都空了，就没必要跑逻辑了
+	if (clear && eventQueue.empty() && activeEvents.empty() && enemyList.empty()) return;
 
 	DWORD now = GetTickCount();
 	DWORD waveTime = now - waveStartTime;
 
-	// 1. 检查是否有新事件需要开始
-	if (!processingEvent && !eventQueue.empty()) {
-		if (waveTime >= (DWORD)eventQueue.front().startTime) {
-			currentEvent = eventQueue.front();
+	// 1. [并行处理第一步] 将所有“时间到了”的事件从队列移动到活跃列表
+	while (!eventQueue.empty()) {
+		// 获取队头事件
+		SpawnEvent& ev = eventQueue.front();
+
+		// 如果波次时间已经超过了该事件的 startTime，说明该开始生成这一组了
+		if (waveTime >= (DWORD)ev.startTime) {
+			// 初始化运行时状态
+			ev.spawnedCount = 0;
+			ev.lastSpawnTime = 0; // 设为0确保加入后立刻生成第一个
+
+			// 移动到活跃列表
+			activeEvents.push_back(ev);
 			eventQueue.pop();
-			processingEvent = true;
-			spawnedCount = 0;
-			lastSpawnTime = 0;
+		}
+		else {
+			// 因为队列通常是按时间排序的，如果队头没到时间，后面的肯定也没到
+			break;
 		}
 	}
 
-	// 2. 执行当前生成事件
-	if (processingEvent) {
-		if (now - lastSpawnTime >= (DWORD)currentEvent.interval) {
-			createEnemy(currentEvent);
-			lastSpawnTime = now;
-			spawnedCount++;
+	// 2. [并行处理第二步] 遍历活跃列表，执行生成逻辑
+	for (auto it = activeEvents.begin(); it != activeEvents.end(); ) {
+		SpawnEvent& ev = *it; // 获取引用
 
-			if (spawnedCount >= currentEvent.count) {
-				processingEvent = false; 
+		// 检查间隔：当前时间 - 上次生成时间 >= 间隔
+		// 注意：这里处理了 ev.runtimeLastSpawnTime == 0 的情况（立即生成）
+		if (ev.lastSpawnTime == 0 || (now - ev.lastSpawnTime >= (DWORD)ev.interval)) {
+
+			createEnemy(ev); // 生成一个敌人
+
+			// 更新该事件的状态
+			ev.lastSpawnTime = now;
+			ev.spawnedCount++;
+
+			// 检查这一组是否生成完毕
+			if (ev.spawnedCount >= ev.count) {
+				// 生成完了，从活跃列表中移除
+				it = activeEvents.erase(it);
+				continue; // erase 会返回下一个迭代器，所以直接 continue
 			}
 		}
+		++it; // 继续检查下一个并发事件
+	}
+}
+
+bool EnemyManager::checkEnemyClear() {
+	if (aliveEnemy == 0 && eventQueue.empty() && activeEvents.empty()) {
+		return true;
+	}
+	else {
+		return false;
 	}
 }
 
@@ -67,7 +97,7 @@ void EnemyManager::createEnemy(const SpawnEvent& ev) {
 		return;
 	}
 	// 普通敌人生成
-	Enemy* newEnemy = new Enemy(ev.startX, ev.startY, ev.hp); // hp暂时写死或加入结构体
+	Enemy* newEnemy = new Enemy(ev.startX, ev.startY, ev.hp); 
 	newEnemy->type = ev.type;
 	newEnemy->alive = true;
 	// 注入移动策略
@@ -117,48 +147,6 @@ void EnemyManager::drawAll() {
 			}
 		e->draw();
 		++it;	
-	}
-}
-
-bool EnemyManager::collision(Bullet* bullet) {
-	bool hitAny = false;
-	for (auto& b : bullet->bulletList) {
-		if (!b->alive) continue;
-
-		for (auto it = enemyList.begin(); it != enemyList.end(); ) {
-			Enemy* enemy = *it;
-			if (!enemy->isAlive()) { ++it; continue; }
-
-			// 自动根据敌人当前类型选择碰撞框宽度/高度
-			int w = (enemy->type == eType::elf) ? Enemy::getElfWidth() : Enemy::getNormalWidth();
-			int h = (enemy->type == eType::elf) ? Enemy::getElfHeight() : Enemy::getNormalHeight();
-
-			if (b->x + Bullet::getBulletWidth() >= enemy->x && b->x <= enemy->x + w &&
-				b->y + Bullet::getBulletHeight() >= enemy->y && b->y <= enemy->y + h)
-			{
-				enemy->hp--;
-				b->alive = false;
-				if (enemy->hp <= 0) {
-					enemy->alive = false;
-					aliveEnemy--;
-					delete enemy;
-					it = enemyList.erase(it);
-					hitAny = true;
-					continue;
-				}
-			}
-			++it;
-		}
-	}
-	return hitAny;
-}
-
-bool EnemyManager::checkEnemyClear() {
-	if (aliveEnemy == 0 && eventQueue.empty() && !processingEvent) {
-		return true;
-	}
-	else {
-		return false;
 	}
 }
 

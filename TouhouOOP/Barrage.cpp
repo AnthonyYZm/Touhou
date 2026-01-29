@@ -7,6 +7,7 @@ int Barrage::globalGroupID = 0;
 
 Barrage::Barrage(float _x, float _y) : Role(_x, _y) {
 	loadimage(&barr1, L"resource/barrage/mid_bullet_darkGreen.png");
+	loadimage(&mxtsSpell, L"resource/barrage/etama_big.png");
 	t1 = 0;
 	t2 = 0;
 	vx = 0.0f;
@@ -21,6 +22,7 @@ Barrage::Barrage(float _x, float _y) : Role(_x, _y) {
 	lock = false;
 	outBound = false;
 	groupID = -1;
+	isFriendly = false;
 }
 
 Barrage::~Barrage() {
@@ -36,7 +38,9 @@ void Barrage::reset() {
 }
 
 void Barrage::draw() {
-	putimagePNG((int)x, (int)y, darkGreenWidth, darkGreenHeight, &barr1, 0, 0);
+	if (isFriendly) putimagePNG((int)x, (int)y, 256, 256, &mxtsSpell, 0, 0, 200, 200);
+	else putimagePNG((int)x, (int)y, darkGreenWidth, darkGreenHeight, &barr1, 0, 0);
+	
 }
 
 void Barrage::move() {
@@ -140,12 +144,9 @@ void Barrage::wheel(Enemy& e, float speed, float vl, int num, int x0, int y0) {
 			newBarrage->moveType = 2;
 			newBarrage->centerX = (float)x0;
 			newBarrage->centerY = (float)y0;
-			newBarrage->radius = 0; // 初始半径
+			newBarrage->radius = 10; // 初始半径
 			newBarrage->rSpeed = speed;
-
-			// 修正：如果 vl 是角速度直接赋值，如果是线速度则要注意除零
-			// 这里假设传入的 vl 是想要的角速度
-			newBarrage->omega = vl;
+			newBarrage->omega = vl / radius;
 
 			newBarrage->currentAngle = i * angleStep;
 			newBarrage->lock = true;

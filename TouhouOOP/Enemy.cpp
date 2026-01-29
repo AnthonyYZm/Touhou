@@ -27,7 +27,7 @@ void Enemy::EnemyX() { //set round's enemyX
 
 void Enemy::draw() {
 	te2 = GetTickCount();
-	putimagePNG((int)x, (int)y, width, height, &enemy1, sx, sy);
+	putimagePNG((int)x, (int)y, width, height, &enemy1, sx, sy, width * 1.5, height * 1.5);
 	if (te2 - te1 > 80) {
 		row = (row + 1) % frame;
 		te1 = te2;

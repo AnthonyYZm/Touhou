@@ -7,6 +7,20 @@
 /// @details Inherited from Role class, represents enemy barrages
 /// </summary>
 
+enum class bType : int {
+	down_st = 0,
+	windmill_st = 1,
+	firework = 2,
+	circle_mill = 3,
+	wheel = 4,
+	pincer_aim = 5,
+	random_rain = 6,
+	pincer_rain = 7,
+
+	combo_1 = 100
+};
+
+
 class Barrage : public Role{
 private:
 	float speed;
@@ -23,17 +37,20 @@ private:
 	static int wheelGroup;
 	bool outBound;
 	DWORD t1, t2;
-	IMAGE barr1;
+	IMAGE barr1, mxtsSpell;
 	static int globalGroupID;
 	int groupID;
 
 public:
+
+	bool isFriendly;	
+
 	Barrage(float _x = 0, float _y = 0);
 	~Barrage();
 	void draw() override;
 	void move() override;
+
 	void Normal(Enemy& e, float speed);
-	
 	void randomRain(float speed);
 	void straightMill(Enemy& e, float speed, int omega, int num, int x0, int y0, int dir);
 	void wheel(Enemy& e, float speed, float vl, int num, int x0, int y0);
@@ -51,5 +68,7 @@ public:
 	int getBarrageCount() const { return barrList.size(); }
 	static int getDarkGreenWidth() { return darkGreenWidth; }
 	static int getDarkGreenHeight() { return darkGreenHeight; }
+	void setVx(float _vx) { vx = _vx; }
+	void setVy(float _vy) { vy = _vy; }
 };
 

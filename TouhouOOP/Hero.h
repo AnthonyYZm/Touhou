@@ -12,15 +12,23 @@ class Hero : public Role {
 	static const int heroWidth;
 	static const int heroHeight;
 	int frame;
-	int JudgeR;
 	float Speed;
-	//th:  hero frame rate 
-	//tb : bullet fire rate
 	DWORD th1, th2; 
+
+	int lives;
+	int power;
+	static long long score;	
+
+	int bombCount;
+	int maxBomb;
 
 public:
 
-	Hero(float _x = WIDTH / 2, float _y = HEIGHT / 4 * 3);
+	int JudgeR;
+	bool invincible;
+	DWORD invincibleEnd;
+
+	Hero(float _x = Right / 2 - heroWidth / 2, float _y = HEIGHT / 4 * 3 + TopEdge);
 	
 	IMAGE hero;
 
@@ -29,6 +37,16 @@ public:
 	void control(float speed);
 	void JudgePoint();	
 
+	void hit(); // ±»»÷ÖÐ
+	void addPower(int p);
+	static void addScore(int s);
+	bool tryUseBomb();
+	void addBomb(int b);
+
+	int getBombCount() const { return bombCount; }
+	bool isInvincible() const { return invincible; }
+	int getPower() const { return power; }
+	int getLives() const { return lives; }
 	static int getWidth() { return heroWidth; }
 	static int getHeight() { return heroHeight; }
 };

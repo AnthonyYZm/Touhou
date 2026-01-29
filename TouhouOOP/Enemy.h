@@ -4,6 +4,11 @@
 #include <map>
 #include <functional>
 
+enum class eType : int {
+	normal = 0,
+	elf = 1
+};
+
 class Enemy;	
 
 // 定义移动策略函数签名：接收 自身指针 和 存活时间(ms)
@@ -19,7 +24,7 @@ class Enemy : public Role {
 	static const int normalHeight;
 	static const int elfWidth;
 	static const int elfHeight;
-
+	
 	DWORD te1, te2;
 	IMAGE enemy1, Elf;	
 
@@ -33,6 +38,7 @@ public:
 
 	MoveStrategy mover; 
 	DWORD birthTime; 
+	eType type;
 
 	Enemy(float _x = 0, float _y = 0, int _hp = 1);
 

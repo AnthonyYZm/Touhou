@@ -1,25 +1,6 @@
 #pragma once
 #include "Library.h"
 
-// Handle Type
-enum class eType : int {
-    normal = 0,
-    elf = 1
-};
-
-enum class bType : int {
-    down_st = 0,
-    windmill_st = 1,
-    firework = 2,
-	circle_mill = 3,
-    wheel = 4,
-	pincer_aim = 5,
-	random_rain = 6,
-	pincer_rain = 7,
-
-	combo_1 = 100
-};
-
 // 弹幕任务结构体 
 struct BarrageTask {
 	int type;           // 弹幕类型 (对应 bType 枚举转 int)
@@ -64,7 +45,6 @@ public:
 	float x, y;
 	int hp;
 	bool alive, fire, lock;
-	eType type;
 
 	Role(float _x, float _y, int _hp) {
 		x = _x;
@@ -114,6 +94,59 @@ inline void putimagePNG(int x, int y, int w, int h, IMAGE* srcImg, int sx, int s
             BYTE sr = sc & 0xFF;          // Red
 
             DWORD& dc = dst[(y + i) * dstWidth + (x + j)];
+            BYTE db = (dc >> 16) & 0xFF;
+            BYTE dg = (dc >> 8) & 0xFF;
+            BYTE dr = dc & 0xFF;
+
+            BYTE r = (sr * sa + dr * (255 - sa)) / 255;
+            BYTE g = (sg * sa + dg * (255 - sa)) / 255;
+            BYTE b = (sb * sa + db * (255 - sa)) / 255;
+
+            dc = RGB(r, g, b);
+        }
+    }
+}
+
+inline void putimagePNG(int x, int y, int srcW, int srcH, IMAGE* srcImg, int sx, int sy, int dstW, int dstH)
+{
+    DWORD* dst = GetImageBuffer();
+    DWORD* src = GetImageBuffer(srcImg);
+
+    int srcTotalWidth = srcImg->getwidth();
+    int srcTotalHeight = srcImg->getheight();
+    int dstTotalWidth = getwidth();
+    int dstTotalHeight = getheight();
+
+    // 遍历屏幕上的目标矩形 (dstW x dstH)
+    for (int i = 0; i < dstH; i++) {
+        // 计算当前像素对应在屏幕的 Y 坐标
+        int screenY = y + i;
+        if (screenY < 0 || screenY >= dstTotalHeight) continue;
+
+        // [核心算法] 计算对应的源图片 Y 坐标 (缩放映射)
+        int sourceY = sy + (i * srcH) / dstH;
+        // 安全检查防止越界
+        if (sourceY >= srcTotalHeight) continue;
+
+        for (int j = 0; j < dstW; j++) {
+            int screenX = x + j;
+            if (screenX < 0 || screenX >= dstTotalWidth) continue;
+
+            // [核心算法] 计算对应的源图片 X 坐标
+            int sourceX = sx + (j * srcW) / dstW;
+            if (sourceX >= srcTotalWidth) continue;
+
+            // 获取源像素
+            DWORD sc = src[sourceY * srcTotalWidth + sourceX];
+            BYTE sa = (sc >> 24) & 0xFF;  // Alpha
+            if (sa == 0) continue;        // 完全透明跳过
+
+            // 混合颜色
+            BYTE sb = (sc >> 16) & 0xFF;
+            BYTE sg = (sc >> 8) & 0xFF;
+            BYTE sr = sc & 0xFF;
+
+            DWORD& dc = dst[screenY * dstTotalWidth + screenX];
             BYTE db = (dc >> 16) & 0xFF;
             BYTE dg = (dc >> 8) & 0xFF;
             BYTE dr = dc & 0xFF;

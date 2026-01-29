@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <queue>
+#include <list>
 
 struct SpawnEvent {
 	int startTime;        // 波次开始后的延迟(ms)
@@ -19,6 +20,8 @@ struct SpawnEvent {
 
 	// 如果是 Boss，直接传入 Boss 对象指针 (可选)
 	Boss* bossInstance = nullptr;
+	int spawnedCount = 0; 
+	DWORD lastSpawnTime = 0;
 
 };
 
@@ -31,12 +34,8 @@ class EnemyManager {
 private:
 
 	std::vector<Enemy*> enemyList;
-
 	std::queue<SpawnEvent> eventQueue;
-	SpawnEvent currentEvent;
-	bool processingEvent;
-	int spawnedCount;
-	DWORD lastSpawnTime;
+	std::list<SpawnEvent> activeEvents;
 	DWORD waveStartTime;
 
 	unsigned int aliveEnemy;
@@ -55,7 +54,6 @@ public:
 	void updateSpawns();
 	void createEnemy(const SpawnEvent& ev);
 	void moveEnemy();
-	bool collision(Bullet* bullet);
 	void InitRound();
 	bool checkEnemyClear();
 	void clearEnemy();
@@ -65,4 +63,15 @@ public:
 	std::vector<Enemy*>& getList() { return enemyList; }
 	int getAliveEnemy() const { return aliveEnemy; }
 	int getEnemyCount() const { return enemyList.size(); }
+
+	struct DropReq {
+		float x, y;
+		int count; 
+	};
+	std::vector<DropReq> dropQueue;
+	std::vector<DropReq> popDrops() {
+		std::vector<DropReq> res = dropQueue;
+		dropQueue.clear();
+		return res;
+	}
 };

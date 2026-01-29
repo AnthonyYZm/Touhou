@@ -35,5 +35,24 @@ namespace Moves {
             };
     }
 
+    static MoveStrategy bossEnter(float speed) {
+        return [=](Enemy* e, int t) {
+            float theta = atan2(CentralY - e->y, CentralX - e->x);
+            if (e->y < CentralY) {
+                e->y += speed * sin(theta);
+                e->x += speed * cos(theta);
+            }
+            };
+	}
+
+    static MoveStrategy shuttle(float speed) {
+        return [=](Enemy* e, int t) {
+            static int count = 0;
+            e->x += speed;
+            if (e->x > Right && count < 2) e->x = LeftEdge;
+            if (e->x == CentralX) count++;
+            };
+	}
+
     // 4. 贝塞尔曲线或追踪逻辑可在此处扩展...
 }
