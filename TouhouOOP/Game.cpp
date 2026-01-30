@@ -1,8 +1,14 @@
 ﻿#include "Game.h"
+#include "Library.h"
+
 
 int Game::bulletLevel = 1;
+AudioManager Game::Audio;
+EffectManager Game::Effects;
+BackgroundManager Game::BG;
 
 Game::Game() {
+	initgraph(WIDTH, HEIGHT);
 	enemyFire = false;
 	wait = false;	
 	bulletLevel = 1;
@@ -10,6 +16,9 @@ Game::Game() {
 	isSpellActive = false;
 	spellAngle = 0.0f;
 	spellRadius = 10.0f;	
+	Audio.init();
+	Effects.init();
+	BG.init();
 }
 
 Game::~Game() {
@@ -20,16 +29,28 @@ void Game::Touhou() {
 	Scr.gameScreen();
 	BeginBatchDraw();
 
+	const int FPS = 60;
+	const int FRAME_WAIT = 1000 / FPS;
+
 	while (IsWindow(GetHWnd())) {
+		DWORD startTime = GetTickCount();
 		cleardevice();
-		//Scr.gameBackground();
-		Scr.gameBackground();
+		BG.update();
+		BG.draw();
 		//Game logic
 		HandleRound();
+		Effects.update();
+		Effects.draw();
 		HeroControl();
 		Bullets();
+
 		FlushBatchDraw();
-		Sleep(1);
+
+		DWORD endTime = GetTickCount();
+		DWORD frameTime = endTime - startTime; 
+		if (frameTime < FRAME_WAIT) {
+			Sleep(FRAME_WAIT - frameTime);
+		}
 	}
 
 	EndBatchDraw();
@@ -61,27 +82,30 @@ void Game::HandleRound() {
 	UpdateItems(); 
 	UpdateSpellCard();
 	CheckCollision();
+	updateBoss();
+	Game::Audio.playBGM(L"bgm_stage1");
 }
 
 void Game::InitLevels() {
-	// --- 第一波 (Wave 1) ---
+	// 第一波
+	/*
 	{
 		waveData w1;
-		w1.waveDelay = 2000; // 第一波开始前等待 2 秒（或者是上一波结束后的间隔）
+		w1.waveDelay = 2000; // 第一波开始前等待 2 秒
 
-		// 事件1配置...
+		// 事件1
 		SpawnEvent e1;
 		e1.startTime = 500; // 波次开始后 500ms 生成
-		e1.count = 50; 		// 生成 5 个敌人
+		e1.count = 10; 		// 生成 5 个敌人
 		e1.interval = 400;  // 每 400ms 生成一个
 		e1.type = eType::normal; // 普通敌人
 		e1.startX = 100; e1.startY = -50; // 起始位置
 		e1.moveLogic = Moves::SineWave(100, 50, 2.0f, 3.0f); // 设定移动逻辑
-		e1.initTasks.push_back(BarrageTask((int)bType::down_st, 500, 5.0f, 0, 1)); // 携带一个简单的下落弹幕任务
+		//e1.initTasks.push_back(BarrageTask((int)bType::down_st, 500, 5.0f, 0, 1)); // 弹幕任务
 
-		w1.events.push_back(e1); // 加入到 WaveData 的事件列表
+		w1.events.push_back(e1); 
 
-		// 事件2配置...
+		// 事件2
 		SpawnEvent e2;
 		e2.startTime = 2000;
 		e2.count = 3;
@@ -92,8 +116,34 @@ void Game::InitLevels() {
 		e2.initTasks.push_back(BarrageTask((int)bType::windmill_st, 80, 4.0f, 3, 1));
 		w1.events.push_back(e2);
 
-		// 推入队列
 		waveQueue.push(w1);
+	}*/
+	{
+		waveData wBoss;
+		wBoss.waveDelay = 2000;
+
+		SpawnEvent boss;
+		boss.startTime = 500;
+		boss.count = 1;
+		boss.hp = 1000;
+		boss.interval = 0;
+		boss.type = eType::boss;
+
+		boss.startX = LeftEdge;
+		boss.startY = TopEdge; 
+
+		// 进场移动：飞到 Y=100 处悬停
+		boss.moveLogic = Moves::bossEnter(30.0f);
+
+		// --- 第一阶段弹幕 (非符) ---
+		// 比较简单的弹幕，比如普通的瞄准弹 + 旋转弹
+		boss.initTasks.push_back(BarrageTask(
+			(int)bType::windmill_st,
+			200, 4.0f, 5, 3 // 快速旋转的风车
+		));
+
+		wBoss.events.push_back(boss);
+		waveQueue.push(wBoss);
 	}
 }
 
@@ -129,52 +179,8 @@ void Game::Barrages() {
 	for (auto* en : E.getList()) {
 		if (!en->isAlive()) continue;
 
-		/*
-		// 2. 如果敌人还没任务（刚生成），根据 wave 配置初始化任务
-		// 这是一个简单的 "配置 -> 任务" 映射器
-		if (en->GetTasks().empty()) {
-			switch (currentWave.barrageType) {
-			// 添加一个组合弹幕
-			case bType::combo_1:
-				en->AddTask(BarrageTask(
-					(int)bType::pincer_aim, // type
-					2000,                   // interval
-					5.0f,                   // speed
-					0,                      // omega (unused)
-					2,                      // num (pairNum)
-					80,                     // r (spacing)
-					1,                      // dir
-					5,                      // burstCount (连发8次)
-					100,                     // burstInterval (间隔80ms)
-					0.6f                    // acc (速度递减)
-				));
-				en->AddTask(BarrageTask(
-					(int)bType::random_rain, // 类型
-					3000,                    // interval: 每轮间隔 3000ms
-					8.0f,                    // speed: 初始速度 8.0 (很快)
-					0,                       // omega: 无用
-					0,                       // num: 无用
-					0,                       // r: 无用
-					0,                       // dir: 无用
-					20,                      // burstCount: 一轮连发 20 发
-					50,                      // burstInterval: 每发间隔 50ms (很密)
-					0.1f                     // speedDec: 每发速度减 0.1 (稍微有点层次感)
-				));
-				en->AddTask(BarrageTask((int)bType::firework, 3000, 4.0f, 0, 12));
-				break;
-			// 示例：普通敌人
-			case bType::down_st:
-				en->AddTask(BarrageTask((int)bType::down_st, 1000, 5.0f, 0, 1));
-				break;
-			// 默认兜底：直接把 wave 的参数转为一个任务
-			default:
-				en->AddTask(BarrageTask((int)wave.barrageType, wave.param[1], wave.barrSpeed, wave.param[2], (int)wave.param[0], (int)wave.param[3]));
-			}
-		}
-		*/
-
-		int centerX = (int)en->x + Enemy::getElfWidth() / 2 - Barrage::getDarkGreenWidth() / 2;
-		int centerY = (int)en->y + Enemy::getElfHeight() / 2 - Barrage::getDarkGreenHeight() / 2;
+		int centerX = (int)en->x + getEnemyWidth(*en) / 2 - Barrage::getDarkGreenWidth() / 2;
+		int centerY = (int)en->y + getEnemyHeight(*en) / 2 - Barrage::getDarkGreenHeight() / 2;
 		
 		// 3. 执行任务
 		for (auto& task : en->GetTasks()) {
@@ -205,8 +211,8 @@ void Game::Barrages() {
 				int pairNum = task.num;
 				for (int i = 1; i <= pairNum; ++i) {
 					int offset = i * spacing;
-					fillcircle(centerX - offset, centerY, 4); // 左点
-					fillcircle(centerX + offset, centerY, 4); // 右点
+					fillcircle(centerX + getEnemyWidth(*en) - offset, centerY, 4); // 左点
+					fillcircle(centerX + getEnemyWidth(*en) + offset, centerY, 4); // 右点
 				}
 				setfillcolor(oldColor);
 			}
@@ -216,8 +222,8 @@ void Game::Barrages() {
 
 			float currentSpeed = task.speed - (task.currentBurst * task.acc);
 			if (currentSpeed < 0.5f) currentSpeed = 0.5f; // 最低速度保护
-			int x = en->x + Enemy::getElfWidth() / 2 - Barrage::getDarkGreenWidth() / 2;
-			int y = en->y + Enemy::getElfHeight() / 2 - Barrage::getDarkGreenHeight() / 2;
+			int x = en->x + getEnemyWidth(*en) / 2 - Barrage::getDarkGreenWidth() / 2;
+			int y = en->y + getEnemyHeight(*en) / 2 - Barrage::getDarkGreenHeight() / 2;
 
 			// 根据任务类型分发
 			switch ((bType)task.type) {
@@ -326,10 +332,8 @@ void Game::UpdateItems() {
 }
 
 void Game::CheckCollision() {
-	// 自机子弹 vs 敌人 。
+	// 自机子弹 vs 敌人 
 	float bulletR = 6.0f;
-
-	// 获取引用，方便操作
 	auto& enemies = E.getList();
 	auto& bullets = B.bulletList;
 
@@ -346,7 +350,9 @@ void Game::CheckCollision() {
 			// --- A. 获取敌人判定参数 ---
 			float eCx = enemy->x + enemy->width / 2.0f;
 			float eCy = enemy->y + enemy->height / 2.0f;
-			float enemyR = (enemy->type == eType::elf) ? 18.0f : 12.0f; // 大精灵18，小兵12
+			float enemyR = 12.0f;
+			if (enemy->type == eType::elf) enemyR = 18.0f;
+			else if (enemy->type == eType::boss) enemyR = 40.0f; // 大精灵18，小兵12
 			// --- B. AABB 粗筛 (性能优化) ---
 			// 如果 x 或 y 轴的投影距离超过半径之和，绝对不可能相撞
 			float rSum = bulletR + enemyR;
@@ -360,9 +366,12 @@ void Game::CheckCollision() {
 			// --- C. 圆形精准判定 ---
 			if (checkCircleCollide(bCx, bCy, bulletR, eCx, eCy, enemyR)) {
 				enemy->hp--;
-				b->alive = false;
+				b->alive = false; 
 				// 死亡逻辑
 				if (enemy->hp <= 0) {
+					b->alive = false;
+					Game::Audio.play(L"break");
+					Game::Effects.spawn(EffectType::EXPLOSION, enemy->x, enemy->y);
 					// 生成掉落 
 					EnemyManager::DropReq req;
 					req.x = eCx;
@@ -390,13 +399,13 @@ void Game::CheckCollision() {
 	if (!Hero.isInvincible()) {
 		float heroCx = Hero.x + Hero::getWidth() / 2;
 		float heroCy = Hero.y + Hero::getHeight() / 2;
-		float heroR = (float)Hero.JudgeR; 
+		float heroR = (float)Hero.JudgeR - 1; 
 		for (auto* b : Barr.barrList) {
 			if (!b->isAlive()) continue;
 			// 弹幕判定半径 
 			float barrCx = b->x + Barrage::getDarkGreenWidth() / 2;
 			float barrCy = b->y + Barrage::getDarkGreenHeight() / 2;
-			float barrR = 10.0f; 
+			float barrR = 6.0f; 
 
 			if (checkCircleCollide(heroCx, heroCy, heroR, barrCx, barrCy, barrR)) {
 				Hero.hit();
@@ -425,30 +434,26 @@ void Game::CheckCollision() {
 			}
 		}
 	}
+
 	// 符卡碰撞逻辑
 	if (isSpellActive && !spellBarrages.empty()) {
 
 		// 1. 符卡消弹：符卡弹幕 vs 敌方弹幕
-
-		for (auto& eb : Barr.barrList) { // 敌方弹幕列表
+		for (auto& eb : Barr.barrList) { 
 			if (!eb->alive) continue;
 			float sbx = eb->x + Barrage::getDarkGreenWidth() - Hero.x;
 			float sby = eb->y + Barrage::getDarkGreenHeight() - Hero.y;
 			float dist = sbx * sbx + sby * sby;
 
-			// 简单的距离判定
-			// 距离小于 20 像素就消除敌弹
 			if (dist - spellRadius * spellRadius < 400) {
-				eb->alive = false; // 消除敌弹
-				// 符卡弹幕通常穿透，所以不消除 sb
-
-				// 可选：生成一个消弹特效 (DropReq 里的 Score点?)
+				if (eb->alive) {
+					eb->alive = false;
+					Game::Effects.spawn(EffectType::CLEAR_SMALL, eb->x, eb->y);
+				}
 			}
 		}
 		
-
 		// 2. 符卡伤害：符卡弹幕 vs 敌人
-
 		for (auto* enemy : E.getList()) {
 			if (!enemy->isAlive()) continue;
 			float enx = enemy->x + enemy->width / 2 - Hero.x;
@@ -457,11 +462,68 @@ void Game::CheckCollision() {
 			if (dist - spellRadius * spellRadius < 400) {
 				// 造成伤害
 				enemy->hp -= 2; // 符卡伤害很高
-				if (enemy->hp <= 0) enemy->alive = false;
+				if (enemy->hp <= 0) {
+					enemy->alive = false;
+					Game::Audio.play(L"break");
+					Game::Effects.spawn(EffectType::EXPLOSION, enemy->x, enemy->y);
+				}
 			}
 		}
-		
 	}
+}
+
+void Game::updateBoss() {
+	// 1. 寻找场上的 Boss
+	Enemy* boss = nullptr;
+	for (auto* e : E.getList()) {
+		if (e->type == eType::boss) {
+			boss = e;
+			break;
+		}
+	}
+	// 如果没有 Boss，或者 Boss 正在进场中（还未就位），则不处理
+	if (!boss || boss->y < 0) return;
+
+	// 2. 阶段转换逻辑
+	// 【阶段 1 -> 阶段 2 (符卡)】：当血量低于 60% 时触发
+	if (boss->phase == 1 && boss->hp < boss->maxHp * 0.6) {
+
+		// --- A. 状态变更 ---
+		boss->phase = 2;
+		boss->ClearTasks(); // 清空普通攻击的任务
+
+		// --- B. 视觉与听觉演出 ---
+		// 1. 播放符卡音效
+		Game::Audio.play(L"spell");
+
+		// 2. 播放立绘切入 (false 表示敌方)
+		// 假设 Effects.spawn 支持 (Type, x, y, isPlayer)
+		Game::Effects.spawn(EffectType::SPELL_CUTIN, 0, 0, false);
+
+		// 3. 切换到符卡背景
+		Game::BG.setMode(BGMode::BOSS_SPELL);
+
+		// 4. (可选) 消除屏幕上现有的敌方子弹，防止太难
+		for (auto* b : Barr.barrList) b->alive = false;
+		Game::Audio.play(L"clear"); // 播放消弹音效
+
+		// --- C. 加载符卡弹幕 (这里配置一个强力的弹幕) ---
+		// 示例：每 4 秒释放一次华丽的烟花，配合高频的瞄准弹
+		boss->AddTask(BarrageTask((int)bType::firework, 4000, 3.0f, 0, 24)); // 24瓣烟花
+		boss->AddTask(BarrageTask(
+			(int)bType::pincer_aim, // 类型
+			1500,                   // interval
+			6.0f,                   // speed
+			0, 2, 50, 1,            // 3对钳形弹
+			5, 50, 0.1f            
+		));
+	}
+
+	// 【Boss 死亡检测】 (通常 CheckCollision 会处理 delete，这里主要处理后事)
+	// 如果你希望 Boss 死后背景变回来，可以在 CheckCollision 的死亡逻辑里加，
+	// 或者在这里检测：
+	// 注意：如果 CheckCollision 已经 delete 了 boss，这里 boss 指针会失效。
+	// 所以建议在 CheckCollision 里处理“Boss死亡 -> BG变回 Normal”。
 }
 
 void Game::CastSpellCard() {
@@ -474,8 +536,10 @@ void Game::CastSpellCard() {
 	isSpellActive = true;
 	spellRadius = 10.0f; // 初始半径为0（从自机身体里钻出来）
 	spellAngle = 0.0f;  // 初始角度
+	Game::Audio.play(L"spell");
+	Game::Effects.spawn(EffectType::SPELL_CUTIN, 0, 0, true);
 
-	// [核心修改] 只生成 4 个弹幕
+	// 只生成 4 个弹幕
 	for (int i = 0; i < 4; ++i) {
 		Barrage* b = new Barrage(Hero.x, Hero.y);
 		b->isFriendly = true; // 标记为友军

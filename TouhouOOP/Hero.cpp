@@ -9,11 +9,11 @@ Hero::Hero(float _x, float _y) : Role(_x, _y, 1) {
 	frame = 8;
 	col = 0;
 	row = 0;
-	JudgeR = 6; //Judge point 判定点
-	Speed = 4.5f; 
+	JudgeR = 6; //Judge point 
+	Speed = 6.0f; 
 	//Hero frame rate
 	th1 = GetTickCount(); th2 = 0;
-	lives = 3;      // 初始 3 条命
+	lives = 100;      
 	power = 0;
 	score = 0;
 	invincible = false;
@@ -23,12 +23,11 @@ Hero::Hero(float _x, float _y) : Role(_x, _y, 1) {
 }
 
 /*Draw hero
-	Use sprite sheet for animation	 精灵表
+	Use sprite sheet for animation	 
 */
 void Hero::draw() {
-	// 处理无敌闪烁效果
 	if (invincible) {
-		if ((GetTickCount() / 50) % 2 == 0) return; // 每50ms闪烁一次，不绘制
+		if ((GetTickCount() / 50) % 2 == 0) return; 
 	}
 
 	th2 = GetTickCount();
@@ -55,10 +54,10 @@ void Hero::JudgePoint() {
 void Hero::control(float speed) {
 	if (GetAsyncKeyState(VK_LEFT) && GetAsyncKeyState(VK_UP) || GetAsyncKeyState(VK_RIGHT) && GetAsyncKeyState(VK_UP) ||
 		GetAsyncKeyState(VK_LEFT) && GetAsyncKeyState(VK_DOWN) || GetAsyncKeyState(VK_RIGHT) && GetAsyncKeyState(VK_DOWN)) {
-		speed /= 1.414f;    // Adjust speed for diagonal movement	斜向运动时速度/√2
+		speed /= 1.414f;    // Adjust speed for diagonal movement	斜锟斤拷锟剿讹拷时锟劫讹拷/锟斤拷2
 	}
 	if (GetAsyncKeyState(VK_LSHIFT) & 0x8000) {
-		speed *= 0.6f; // Slow down when holding Shift key	按住Shift键减速
+		speed *= 0.6f; // Slow down when holding Shift key	锟斤拷住Shift锟斤拷锟斤拷锟斤拷
 		JudgePoint();
 	}
 	if (GetAsyncKeyState(VK_UP) & 0x8000) {
@@ -96,19 +95,16 @@ void Hero::move() {
 void Hero::hit() {
 	if (invincible) return; 
 	lives--;
-	// 播放被弹音效 (TODO)
 
 	if (lives >= 0) {
-		// 重置位置
 		x = Right / 2 - heroWidth / 2;
 		y = HEIGHT / 4 * 3 + TopEdge;
 
-		// 给予 3 秒无敌时间
 		invincible = true;
 		invincibleEnd = GetTickCount() + 3000;
 	}
 	else {
-		// Game Over 逻辑将在 Game 类中处理
+		// Game Over 
 		alive = false;
 	}
 }
@@ -128,7 +124,7 @@ void Hero::addBomb(int b) {
 
 void Hero::addPower(int p) {
 	power += p;
-	if (power > 128) power = 128; // 设定上限
+	if (power > 128) power = 128; 
 }
 
 void Hero::addScore(int s) {

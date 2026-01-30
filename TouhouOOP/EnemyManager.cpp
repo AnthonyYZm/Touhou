@@ -100,6 +100,11 @@ void EnemyManager::createEnemy(const SpawnEvent& ev) {
 	Enemy* newEnemy = new Enemy(ev.startX, ev.startY, ev.hp); 
 	newEnemy->type = ev.type;
 	newEnemy->alive = true;
+	if (newEnemy->type == eType::boss) {
+		newEnemy->maxHp = (ev.hp > 0) ? ev.hp : 2000; // 如果事件没设血量，给默认2000
+		newEnemy->hp = newEnemy->maxHp;
+		newEnemy->phase = 1; // 初始阶段
+	}
 	// 注入移动策略
 	newEnemy->setStrategy(ev.moveLogic);
 	// 注入弹幕任务
@@ -132,15 +137,17 @@ void EnemyManager::drawAll() {
 				e->sx = e->row * 32.5f;
 				e->sy = 322;
 				e->frame = 4;
-				e->width = Enemy::getNormalWidth();
-				e->height = Enemy::getNormalHeight();
+				e->width = getEnemyWidth(*e);
+				e->height = getEnemyHeight(*e);
 				break;
 			case eType::elf:
 				e->sx = e->row * 64;
 				e->sy = 454;
 				e->frame = 5;
-				e->width = Enemy::getElfWidth();
-				e->height = Enemy::getElfHeight();
+				e->width = getEnemyWidth(*e);
+				e->height = getEnemyHeight(*e);
+				break;
+			case eType::boss:
 				break;
 			default:
 				break;

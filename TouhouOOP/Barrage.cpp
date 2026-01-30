@@ -76,7 +76,7 @@ void Barrage::collision() {
 
 void Barrage::Normal(Enemy& e, float speed) {
 	if (!e.isAlive() || !e.fire) return;
-	Barrage* newBarrage = new Barrage(e.x + Enemy::getNormalWidth() / 2 - darkGreenWidth / 2, e.y + Enemy::getNormalHeight() / 2 - darkGreenHeight / 2);
+	Barrage* newBarrage = new Barrage(e.x + getEnemyWidth(e) / 2 - darkGreenWidth / 2, e.y + getEnemyHeight(e) / 2 - darkGreenHeight / 2);
 	newBarrage->vx = 0;
 	newBarrage->vy = speed;
 	newBarrage->alive = true;
@@ -171,7 +171,7 @@ void Barrage::pincerAim(Enemy& e, float targetX, float targetY, float speed, int
 			// 当前的横向偏移量
 			int offset = i * spacing;
 			// 左侧子弹
-			Barrage* leftB = new Barrage(x0 - offset, y0); 
+			Barrage* leftB = new Barrage(x0 + getEnemyWidth(e) - offset, y0);
 			float angleL = atan2(aimY - y0, aimX - (x0 - offset)); 
 			leftB->vx = speed * cos(angleL);
 			leftB->vy = speed * sin(angleL);
@@ -180,7 +180,7 @@ void Barrage::pincerAim(Enemy& e, float targetX, float targetY, float speed, int
 			barrList.push_back(leftB);
 
 			// 右侧子弹
-			Barrage* rightB = new Barrage(x0 + offset, y0);
+			Barrage* rightB = new Barrage(x0 + getEnemyWidth(e) + offset, y0);
 			float angleR = atan2(aimY - y0, aimX - (x0 + offset)); 
 			rightB->vx = speed * cos(angleR);
 			rightB->vy = speed * sin(angleR);

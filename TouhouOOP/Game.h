@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Role.h"
 #include "Hero.h"	
 #include "Bullet.h"
@@ -8,6 +9,9 @@
 #include "EnemyManager.h"
 #include "Boss.h"
 #include "Item.h"
+#include "Audio.h"     
+#include "Effect.h"    
+#include "Background.h"
 
 class Game {
 
@@ -26,21 +30,26 @@ class Game {
 
 	std::vector<Item*> items;
 
-	std::vector<Barrage*> spellBarrages; // 存储符卡产生的弹幕
-	bool isSpellActive;                  // 符卡是否正在释放中
+	std::vector<Barrage*> spellBarrages; 
+	bool isSpellActive;                  
 	float spellRadius;
 	float spellAngle;
 
 	DWORD waitStart;
 
 public:
+
+	static AudioManager Audio;
+	static EffectManager Effects;
+	static BackgroundManager BG;
+
 	Game();
 	~Game();
 
 	void Touhou();
 	void InitLevels();
 	void HandleRound();
-	void createBoss();
+	void updateBoss();
 	void Bullets();	
 	void HeroControl();	
 	void UpdateItems();

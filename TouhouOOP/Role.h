@@ -117,31 +117,37 @@ inline void putimagePNG(int x, int y, int srcW, int srcH, IMAGE* srcImg, int sx,
     int dstTotalWidth = getwidth();
     int dstTotalHeight = getheight();
 
-    // 遍历屏幕上的目标矩形 (dstW x dstH)
-    for (int i = 0; i < dstH; i++) {
-        // 计算当前像素对应在屏幕的 Y 坐标
-        int screenY = y + i;
-        if (screenY < 0 || screenY >= dstTotalHeight) continue;
+    // 定义允许绘制的裁剪区域 (Clip Region)
+    // 如果你想让特效只显示在游戏框内：
+    int clipLeft = LeftEdge;
+    int clipTop = TopEdge;
+    int clipRight = LeftEdge + WIDTH;
+    int clipBottom = TopEdge + HEIGHT;
 
-        // [核心算法] 计算对应的源图片 Y 坐标 (缩放映射)
+    for (int i = 0; i < dstH; i++) {
+        int screenY = y + i;
+        // 1. 屏幕物理边界检查
+        if (screenY < 0 || screenY >= dstTotalHeight) continue;
+        // 2. 游戏逻辑边界检查 (Clip)
+        if (screenY < clipTop || screenY >= clipBottom) continue;
+
         int sourceY = sy + (i * srcH) / dstH;
-        // 安全检查防止越界
         if (sourceY >= srcTotalHeight) continue;
 
         for (int j = 0; j < dstW; j++) {
             int screenX = x + j;
+            // 1. 屏幕物理边界检查
             if (screenX < 0 || screenX >= dstTotalWidth) continue;
+            // 2. 游戏逻辑边界检查 (Clip)
+            if (screenX < clipLeft || screenX >= clipRight) continue;
 
-            // [核心算法] 计算对应的源图片 X 坐标
             int sourceX = sx + (j * srcW) / dstW;
             if (sourceX >= srcTotalWidth) continue;
 
-            // 获取源像素
             DWORD sc = src[sourceY * srcTotalWidth + sourceX];
-            BYTE sa = (sc >> 24) & 0xFF;  // Alpha
-            if (sa == 0) continue;        // 完全透明跳过
+            BYTE sa = (sc >> 24) & 0xFF;
+            if (sa == 0) continue;
 
-            // 混合颜色
             BYTE sb = (sc >> 16) & 0xFF;
             BYTE sg = (sc >> 8) & 0xFF;
             BYTE sr = sc & 0xFF;

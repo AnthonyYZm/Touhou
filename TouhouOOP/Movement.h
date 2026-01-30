@@ -41,7 +41,9 @@ namespace Moves {
             if (e->y < CentralY) {
                 e->y += speed * sin(theta);
                 e->x += speed * cos(theta);
+				e->fire = false;
             }
+            else e->fire = true;
             };
 	}
 
