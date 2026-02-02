@@ -51,9 +51,6 @@
     <ClCompile Include="Effect.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Background.h">
-      <Filter>头文件</Filter>
-    </ClCompile>
     <ClCompile Include="Background.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -99,6 +96,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Effect.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Background.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,5 +1,6 @@
 #pragma once
 #include <graphics.h>
+#include "Role.h"
 
 enum class BGMode {
 	NORMAL,
@@ -11,7 +12,7 @@ private:
 	IMAGE bgNormal;
 	IMAGE bgSpellBase;  // cdbg05a
 	IMAGE bgSpellLayer; // cdbg05b (¹ö¶¯²ã)
-
+	IMAGE tips;
 	BGMode currentMode;
 
 	float scrollY; // ¹ö¶¯²ãµÄYÆ«ÒÆ
@@ -21,6 +22,6 @@ public:
 	void init();
 	void update();
 	void draw();
-
+	BGMode getMode() const { return currentMode; }
 	void setMode(BGMode mode);
 };

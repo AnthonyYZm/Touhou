@@ -1,5 +1,5 @@
 #include "Effect.h"
-#include "Game.h" // 获取边界常量
+//#include "Game.h" // 获取边界常量
 
 EffectManager::EffectManager() { loaded = false; }
 
@@ -10,6 +10,7 @@ void EffectManager::init() {
 	loadimage(&imgClear, L"resource/barrage/etama2.png");
 	loadimage(&imgReimuSpell, L"resource/other/ReimuSpell.png");
 	loadimage(&imgSanaeSpell, L"resource/other/sanaeSpell.png");
+	loadimage(&imgSpellName, L"resource/text/spellcardAttack.png");
 	loaded = true;
 }
 
@@ -55,6 +56,16 @@ void EffectManager::spawn(EffectType type, float x, float y, bool isPlayer) {
 		// 初始位置设置在屏幕左外侧
 		eff.y = TopEdge; // 这里的y可以根据立绘高度调整
 		break;
+	case EffectType::SPELL_NAME:
+		eff.imgPtr = &imgSpellName;
+		eff.isPersistent = true; // 标记为常驻
+		eff.srcW = imgSpellName.getwidth();
+		eff.srcH = imgSpellName.getheight();
+		eff.scale = 5.0f; // 初始很大
+		// 初始位置设定在右下角
+		eff.x = (float)(LeftEdge + WIDTH - 150);
+		eff.y = (float)(TopEdge + HEIGHT - 100);
+		break;
 	}
 	effects.push_back(eff);
 }
@@ -83,6 +94,7 @@ void EffectManager::update() {
 			break;
 
 		case EffectType::SPELL_CUTIN:
+		{
 			if (elapsed > 1000) it->active = false; // 1秒后结束
 
 			// 计算移动逻辑 (Left -> Center -> Right)
@@ -111,7 +123,32 @@ void EffectManager::update() {
 				float currentCenter = centerX + 20.0f;
 				it->x = currentCenter + (endX - currentCenter) * (subT * subT * subT);
 			}
+			break; 
+		}
+		case EffectType::SPELL_NAME:
+		{
+			float t = elapsed / 1000.0f; // 0.0 ~ 1.0 对应 1秒动画期
+
+			if (t <= 0.3f) {
+				// 1. 前 0.3s：快速收缩
+				float subT = t / 0.3f;
+				it->scale = 3.0f - (2.0f * subT); // 3.0 -> 1.0
+			}
+			else if (t <= 1.0f) {
+				// 2. 0.3s~1.0s：从右下移动到右上
+				float subT = (t - 0.3f) / 0.7f;
+				it->scale = 1.0f;
+				float startY = (float)(TopEdge + HEIGHT - 100);
+				float endY = (float)(TopEdge + 50);
+				it->y = startY + (endY - startY) * subT; // 线性移动
+			}
+			else {
+				// 3. 1s 之后：静止在右上
+				it->scale = 1.0f;
+				it->y = (float)(TopEdge + 50);
+			}
 			break;
+		}
 		}
 		++it;
 	}
@@ -146,6 +183,21 @@ void EffectManager::draw() {
 		else if (eff.type == EffectType::SPELL_CUTIN) {
 			// 直接绘制，x 已在 update 中计算好
 			putimagePNG((int)eff.x, (int)eff.y, eff.srcW, eff.srcH, eff.imgPtr, eff.srcX, eff.srcY, eff.srcW, eff.srcH);
+		}
+		else if (eff.type == EffectType::SPELL_NAME) {
+			int drawW = (int)(eff.srcW * eff.scale * 2);
+			int drawH = (int)(eff.srcH * eff.scale * 2);
+			// 中心点对齐绘制，防止缩放时位置乱跳
+			putimagePNG((int)eff.x - drawW / 2, (int)eff.y - drawH / 2,
+				eff.srcW, eff.srcH, eff.imgPtr, 0, 0, drawW, drawH);
+		}
+	}
+}
+
+void EffectManager::clearSpellName() {
+	for (auto& eff : effects) {
+		if (eff.type == EffectType::SPELL_NAME) {
+			eff.active = false;
 		}
 	}
 }

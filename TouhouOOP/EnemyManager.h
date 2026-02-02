@@ -59,6 +59,7 @@ public:
 	void clearEnemy();
 	void setWave(const std::vector<SpawnEvent>& event);
 	void drawAll(); 
+	void outBound();
 
 	std::vector<Enemy*>& getList() { return enemyList; }
 	int getAliveEnemy() const { return aliveEnemy; }

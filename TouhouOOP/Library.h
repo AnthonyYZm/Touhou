@@ -11,14 +11,14 @@
 #include <vector>
 #include <chrono>
 #include <set>
-const float WIDTH = 750.0f;	
-const float HEIGHT = 900.0f;
-const float screenWidth = 1280.0f;
-const float screenHeight = 960.0f;
-const float LeftEdge = 32.0f;
-const float TopEdge = 30.0f;
-const float Right = LeftEdge + WIDTH;
-const float Bottom = TopEdge + HEIGHT;
-const float CentralX = 375.0f;
-const float CentralY = 250.0f;
+const int WIDTH = 750;	
+const int HEIGHT = 900;
+const int screenWidth = 1280;
+const int screenHeight = 960;
+const int LeftEdge = 32;
+const int TopEdge = 30;
+const int Right = LeftEdge + WIDTH;
+const int Bottom = TopEdge + HEIGHT;
+const int CentralX = 375;
+const int CentralY = 250;
 const float PI = 3.14159f;

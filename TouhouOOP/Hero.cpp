@@ -3,6 +3,8 @@
 int const Hero::heroWidth = 32;
 int const Hero::heroHeight = 45;
 long long Hero::score = 0;
+static const int VISUAL_W = 48;
+static const int VISUAL_H = 67;
 
 Hero::Hero(float _x, float _y) : Role(_x, _y, 1) {
 	loadimage(&hero, L"resource/hero/Reimu.png");
@@ -35,7 +37,9 @@ void Hero::draw() {
 	int sy = 0;
 	if (GetAsyncKeyState(VK_LEFT)) { sy = 49; }
 	else if (GetAsyncKeyState(VK_RIGHT)) { sy = 98; }
-	putimagePNG((int)x, (int)y, heroWidth, heroHeight, &hero, sx, sy, 48, 67.5);
+	int drawX = (int)(x - VISUAL_W / 2);
+	int drawY = (int)(y - VISUAL_H / 2);
+	putimagePNG(drawX, drawY, heroWidth, heroHeight, &hero, sx, sy, VISUAL_W, VISUAL_H);
 	if (th2 - th1 > 80) {
 		row = (row + 1) % frame;
 	th1 = th2;
@@ -45,8 +49,7 @@ void Hero::draw() {
 void Hero::JudgePoint() {
 	setlinecolor(RED);
 	setfillcolor(WHITE);
-	fillcircle((int)(x + 48 / 2), (int)(y + 67.5 / 2), JudgeR);
-	// For collision detection, use the point (x + heroWidth/2, y + heroHeight - JudgeR)
+	fillcircle((int)x, (int)y, JudgeR);
 	// This point is located at the bottom center of the hero sprite
 }	
 
@@ -77,19 +80,16 @@ void Hero::control(float speed) {
 
 /*Hero move and set boundary*/
 void Hero::move() {
-
 	if (invincible && GetTickCount() > invincibleEnd) {
 		invincible = false;
 	}
-
-	if (x >= LeftEdge && x <= WIDTH - heroWidth && y >= TopEdge && y <= HEIGHT - heroHeight) {
-		control(Speed); //Set hero's speed here
-	}
-
-	if (x <= LeftEdge) x = LeftEdge;
-	if (x >= WIDTH - heroWidth) x = (float)(WIDTH - heroWidth);
-	if (y <= TopEdge) y = TopEdge;
-	if (y >= HEIGHT - heroHeight) y = (float)(HEIGHT - heroHeight);
+	control(Speed);
+	float halfW = VISUAL_W / 2.0f;
+	float halfH = VISUAL_H / 2.0f;
+	if (x < LeftEdge + halfW) x = LeftEdge + halfW;
+	if (x > (LeftEdge + WIDTH) - halfW) x = (LeftEdge + WIDTH) - halfW;
+	if (y < TopEdge + halfH) y = TopEdge + halfH;
+	if (y > (TopEdge + HEIGHT) - halfH) y = (TopEdge + HEIGHT) - halfH;
 }
 
 void Hero::hit() {
@@ -97,9 +97,8 @@ void Hero::hit() {
 	lives--;
 
 	if (lives >= 0) {
-		x = Right / 2 - heroWidth / 2;
-		y = HEIGHT / 4 * 3 + TopEdge;
-
+		x = (LeftEdge + WIDTH) / 2.0f;
+		y = TopEdge + HEIGHT - 100.0f;
 		invincible = true;
 		invincibleEnd = GetTickCount() + 3000;
 	}

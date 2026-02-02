@@ -37,24 +37,66 @@ namespace Moves {
 
     static MoveStrategy bossEnter(float speed) {
         return [=](Enemy* e, int t) {
-            float theta = atan2(CentralY - e->y, CentralX - e->x);
-            if (e->y < CentralY) {
-                e->y += speed * sin(theta);
-                e->x += speed * cos(theta);
-				e->fire = false;
+            float dx = CentralX - e->x;
+            float dy = CentralY - e->y;
+            float dist = sqrt(dx * dx + dy * dy);
+            if (dist <= speed) {
+                e->x = CentralX;
+                e->y = CentralY;
             }
-            else e->fire = true;
+            else {
+                float theta = atan2(dy, dx);
+                e->x += speed * cos(theta);
+                e->y += speed * sin(theta);
+            }
+            };
+    }
+
+    static MoveStrategy shuttle(float speed, int dir) {
+        return [=](Enemy* e, int t) {
+            if (dir == 0) e->x -= speed;
+			else e->x += speed;
             };
 	}
 
-    static MoveStrategy shuttle(float speed) {
+    static MoveStrategy Stay() {
         return [=](Enemy* e, int t) {
-            static int count = 0;
-            e->x += speed;
-            if (e->x > Right && count < 2) e->x = LeftEdge;
-            if (e->x == CentralX) count++;
+            e->x = e->x;
+            e->y = e->y;
             };
 	}
+
+    static MoveStrategy StepLeftUp(int interval, int duration, float speedX, float speedY) {
+        return [=](Enemy* e, int timer) {
+            int t = timer % interval;
+            if (t < duration && e->y > TopEdge + 50) {
+                if (e->x > 20) e->x -= speedX;
+                if (e->y > 20) e->y -= speedY;
+            }
+            else {
+                e->y = e->y;
+                e->x = e->x;
+            }
+            };
+    }
+
+    static MoveStrategy MoveTo(float targetX, float targetY, float speed) {
+        return [=](Enemy* e, int timer) {
+            float dx = targetX - e->x;
+            float dy = targetY - e->y;
+            float dist = sqrt(dx * dx + dy * dy);
+
+            if (dist < speed) {
+                e->x = targetX;
+                e->y = targetY;
+            }
+            else {
+                float angle = atan2(dy, dx);
+                e->x += speed * cos(angle);
+                e->y += speed * sin(angle);
+            }
+            };
+    }
 
     // 4. 贝塞尔曲线或追踪逻辑可在此处扩展...
 }

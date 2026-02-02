@@ -36,6 +36,7 @@ class Game {
 	float spellAngle;
 
 	DWORD waitStart;
+	
 
 public:
 
@@ -59,6 +60,7 @@ public:
 	void CastSpellCard();   
 	void UpdateSpellCard(); 
 	void ClearSpellBarrages(); 
+	void handleBGM();
 	
 	bool checkCircleCollide(float x1, float y1, float r1, float x2, float y2, float r2) {
 		float dx = x1 - x2;
@@ -68,5 +70,6 @@ public:
 		return distSq < (rSum * rSum);
 	}
 	
+	void DrawDebug();
 };
 

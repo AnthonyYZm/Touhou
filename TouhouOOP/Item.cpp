@@ -19,7 +19,7 @@ Item::Item(float _x, float _y) : Role(_x, _y) {
 Item::~Item() {}
 
 void Item::draw() {
-	putimagePNG((int)x, (int)y, 13, 13, &imgItem, 2, 2);
+	putimagePNG((int)x, (int)y, 13, 13, &imgItem, 2, 2, 18, 18);
 }
 
 void Item::move() {

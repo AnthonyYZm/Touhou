@@ -3,9 +3,6 @@
 #include <map>
 #pragma comment(lib, "Winmm.lib")
 
-// 使用 mciSendString 需要包含此库
-#pragma comment(lib, "Winmm.lib")
-
 class AudioManager {
 private:
 	// 存储音效别名对应的文件路径

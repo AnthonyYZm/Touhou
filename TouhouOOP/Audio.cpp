@@ -25,7 +25,7 @@ void AudioManager::init() {
 	sounds[L"breakBoss"] = L"resource/sound/break_boss.wav"; 
 
 	sounds[L"bgm_stage1"] = L"resource/bgm/【東方風神録】～ 神々が恋した幻想郷 ～　.mp3";
-	sounds[L"bgm_boss"] = L"resource/sound/信仰は儚き人間の為に (信仰是为了虚幻之人) - 上海爱莉丝幻乐团.mp3";
+	sounds[L"bgm_boss"] = L"resource/bgm/【東方風神録】～ 信仰は儚き人間の為に ～　.mp3";
 
 	// 预加载 (打开设备)
 	for (auto const& [alias, path] : sounds) {
@@ -37,11 +37,6 @@ void AudioManager::init() {
 }
 
 void AudioManager::playFast(const std::wstring& path) {
-	// SND_ASYNC: 异步播放（不阻塞主线程）
-	// SND_FILENAME: 从文件播放
-	// SND_NODEFAULT: 找不到文件时不播放默认系统音
-	// 注意：PlaySound 同一时间只能播一个声音，后来的会覆盖先来的。
-	// 这对于密集音效（如机枪）可能听起来会吞音，但绝不会卡顿。
 	PlaySound(path.c_str(), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
 }
 
@@ -52,7 +47,7 @@ void AudioManager::play(const std::wstring& name) {
 			playFast(sounds[name]);
 		}
 		return;
-	}
+	}     
 
 	// 其他长音效（如 spell, bgm）继续用 MCI
 	if (sounds.find(name) == sounds.end()) return;

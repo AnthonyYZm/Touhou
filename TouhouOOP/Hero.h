@@ -1,5 +1,6 @@
 #pragma once
 #include "Role.h"
+#include "Audio.h"
 
 /// <summary>
 ///	@brief Hero class

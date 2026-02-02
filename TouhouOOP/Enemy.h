@@ -48,6 +48,9 @@ public:
 	eType type;
 	static const int bossFrameW = 64; 
 	static const int bossFrameH = 85; 
+	int texWidth;
+	int texHeight;
+	int currentPhaseIdx;
 
 	Enemy(float _x = 0, float _y = 0, int _hp = 1);
 
@@ -61,14 +64,12 @@ public:
 
 	void draw() override;
 	virtual void move() override;
-	void draw2();	
 	void InitRound();
 	bool checkEnemyClear();
 	bool isFire() const { return fire; }
 	bool isAlive() const { return alive; }
 	void setStrategy(MoveStrategy ms) { mover = ms; }	
 	void EnemyX(); //set round's enemyX
-
 	// ÃÌº”»ŒŒÒ
 	void AddTask(BarrageTask task) { tasks.push_back(task); }
 	void ClearTasks() {	tasks.clear(); }
@@ -81,6 +82,5 @@ public:
 	void setVx(float _vx) { vx = _vx; };	
 	void setVy(float _vy) { vy = _vy; };
 	void setAction(int state) { actionState = state; }
-
 };
 

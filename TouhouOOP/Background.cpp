@@ -1,5 +1,5 @@
 #include "Background.h"
-#include "Game.h"
+
 
 BackgroundManager::BackgroundManager() {
 	scrollY = 0.0f;
@@ -10,6 +10,7 @@ void BackgroundManager::init() {
 	loadimage(&bgNormal, L"resource/background/game.png", WIDTH, HEIGHT);
 	loadimage(&bgSpellBase, L"resource/background/cdbg05a.png", WIDTH, HEIGHT);
 	loadimage(&bgSpellLayer, L"resource/background/cdbg05b.png", WIDTH, WIDTH);
+	loadimage(&tips, L"resource/background/tips.png");
 }
 
 void BackgroundManager::setMode(BGMode mode) {
@@ -17,12 +18,15 @@ void BackgroundManager::setMode(BGMode mode) {
 }
 
 void BackgroundManager::update() {
-	if (currentMode == BGMode::BOSS_SPELL) {
-		// 滚动逻辑
-		scrollY += 2.0f; // 滚动速度
-		if (scrollY >= bgSpellLayer.getheight()) {
-			scrollY = 0;
-		}
+	// 无论什么模式，背景都向下滚动
+	float scrollSpeed = (currentMode == BGMode::BOSS_SPELL) ? 2.0f : 1.0f; // 符卡阶段可以滚快点
+	scrollY += scrollSpeed;
+
+	// 获取当前背景的高度进行取模，防止 scrollY 无限增加
+	int currentBGHeight = (currentMode == BGMode::BOSS_SPELL) ? bgSpellLayer.getheight() : HEIGHT;
+
+	if (scrollY >= currentBGHeight) {
+		scrollY = 1;
 	}
 }
 
@@ -49,16 +53,26 @@ void TileDraw(IMAGE* img, float scrollY, int alpha = 255) {
 }
 
 void BackgroundManager::draw() {
+	putimage(LeftEdge + WIDTH + 30, TopEdge, &tips);
+	HRGN rgn = CreateRectRgn(LeftEdge, TopEdge, LeftEdge + WIDTH, TopEdge + HEIGHT);
+	setcliprgn(rgn);
 	if (currentMode == BGMode::NORMAL) {
-		// 普通背景，不滚动
-		putimage(LeftEdge, TopEdge, &bgNormal);
+		// --- 普通背景无缝滚动逻辑 ---
+		int offset = (int)scrollY;
+
+		// 1. 绘制第一张图（下方）
+		putimage(LeftEdge, TopEdge + offset, &bgNormal);
+
+		// 2. 绘制第二张图（上方，填补顶部的空缺）
+		putimage(LeftEdge, TopEdge + offset - HEIGHT, &bgNormal);
 	}
 	else if (currentMode == BGMode::BOSS_SPELL) {
 		// 1. 底层 (不滚动)
 		putimage(LeftEdge, TopEdge, &bgSpellBase);
 
 		// 2. 顶层 (滚动 + 平铺)
-		// 假设 cdbg05b 是一张小图，需要平铺满屏幕
 		TileDraw(&bgSpellLayer, scrollY);
 	}
+	setcliprgn(NULL);
+	DeleteObject(rgn);
 }

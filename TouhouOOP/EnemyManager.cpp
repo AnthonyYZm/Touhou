@@ -80,12 +80,12 @@ void EnemyManager::updateSpawns() {
 }
 
 bool EnemyManager::checkEnemyClear() {
-	if (aliveEnemy == 0 && eventQueue.empty() && activeEvents.empty()) {
-		return true;
-	}
-	else {
-		return false;
-	}
+	if (enemyList.empty() && eventQueue.empty() && activeEvents.empty()) {
+        return true;
+    }
+    else {
+        return false;
+    }
 }
 
 void EnemyManager::createEnemy(const SpawnEvent& ev) {
@@ -119,9 +119,23 @@ void EnemyManager::moveEnemy() {
 	updateSpawns(); // 先看看有没有新怪要刷
 	for (auto it = enemyList.begin(); it != enemyList.end(); ++it) {
 		Enemy* e = *it;
+		if (e == nullptr) continue;
 		if (e->isAlive()) {
 			e->move(); // 多态调用：Boss调Boss的，小兵调MoveStrategy
 		}
+	}
+}
+
+void EnemyManager::outBound() {
+	for (auto it = enemyList.begin(); it != enemyList.end(); ) {
+		Enemy* e = *it;
+		bool isOut = (e->y > HEIGHT + 100 || e->x < -150 || e->x > WIDTH + 150 || e->y < -300);
+		if (e->type != eType::boss && isOut) {
+			delete e;
+			it = enemyList.erase(it);
+			continue;
+		}
+		++it;
 	}
 }
 
@@ -132,26 +146,20 @@ void EnemyManager::drawAll() {
 			++it;
 			continue;
 		}
-		switch (e->type) {
-			case eType::normal:
-				e->sx = e->row * 32.5f;
-				e->sy = 322;
-				e->frame = 4;
-				e->width = getEnemyWidth(*e);
-				e->height = getEnemyHeight(*e);
-				break;
-			case eType::elf:
-				e->sx = e->row * 64;
-				e->sy = 454;
-				e->frame = 5;
-				e->width = getEnemyWidth(*e);
-				e->height = getEnemyHeight(*e);
-				break;
-			case eType::boss:
-				break;
-			default:
-				break;
-			}
+		if (e->type == eType::normal) {
+			e->sx = e->row * 32.5f;
+			e->sy = 322;
+			e->frame = 4;
+		}
+		else if (e->type == eType::elf) {
+			e->sx = e->row * 64;
+			e->sy = 454;
+			e->frame = 5;
+		}
+		e->texWidth = getEnemyWidth(*e);
+		e->texHeight = getEnemyHeight(*e);
+		e->width = (int)(e->texWidth * 1.5);
+		e->height = (int)(e->texHeight * 1.5);
 		e->draw();
 		++it;	
 	}

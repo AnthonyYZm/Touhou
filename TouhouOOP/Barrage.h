@@ -8,16 +8,16 @@
 /// </summary>
 
 enum class bType : int {
-	down_st = 0,
-	windmill_st = 1,
-	firework = 2,
-	circle_mill = 3,
-	wheel = 4,
-	pincer_aim = 5,
-	random_rain = 6,
-	pincer_rain = 7,
-
-	combo_1 = 100
+	down_st,
+	windmill_st,
+	firework,
+	circle_mill,
+	wheel,
+	pincer_aim,
+	random_rain,
+	pincer_rain,
+	star_fall,
+	windmill_switching
 };
 
 
@@ -37,7 +37,7 @@ private:
 	static int wheelGroup;
 	bool outBound;
 	DWORD t1, t2;
-	IMAGE barr1, mxtsSpell;
+	static IMAGE barr1, mxtsSpell;
 	static int globalGroupID;
 	int groupID;
 
@@ -57,7 +57,9 @@ public:
 	void fireWork(Enemy& e, float speed, int num, int x0, int y0);
 	void circleMill(Enemy& e, float speed, int r, int num, int x0, int y0);
 	void pincerAim(Enemy& e, float targetX, float targetY, float speed, int spacing, int pairNum, int x0, int y0);
-
+	void fiveStar(Enemy& e, int currentStep, int totalSteps, float R_orbit, float r_star, float stretchSpeed, float normalAcc, DWORD releaseTime, int starCount, int x0, int y0);
+	void directionalMill(Enemy& e, float speed, float baseAngle, int num, int x0, int y0);		
+	
 	void update();
 	void reset();
 	void clearBarrage();
