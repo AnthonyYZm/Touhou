@@ -38,7 +38,7 @@ Enemy::Enemy(float _x, float _y, int _hp) : Role(_x, _y, _hp) {
     hp = (_hp > 0) ? _hp : 1;
 	col = 0; frame = 0; row = 0;
 	enemyX = 0; enemyY = 0;
-    te1 = 0, te2 = 0;	
+    te1 = 0, te2 = 0;
 	fire = true;
 	type = eType::normal;
     texWidth = 48;

@@ -114,6 +114,7 @@ void Game::InitLevels() {
 		e1.startTime = 500; // 波次开始后 500ms 生成
 		e1.count = 15; 		// 生成 5 个敌人
 		e1.interval = 400;  // 每 400ms 生成一个
+		e1.hp = 1;
 		e1.type = eType::normal; // 普通敌人
 		e1.startX = CentralX; e1.startY = TopEdge; // 起始位置
 		e1.moveLogic = Moves::SineWave(CentralX, 50, 2.0f, 3.0f); // 设定移动逻辑
@@ -154,6 +155,7 @@ void Game::InitLevels() {
 		e4.startTime = 2000;
 		e4.count = 50;
 		e4.type = eType::normal;
+		e4.hp = 1;
 		e4.interval = 100;
 		e4.startX = LeftEdge; e4.startY = CentralY - 50;
 		e4.moveLogic = Moves::shuttle(10, 1);
@@ -163,6 +165,7 @@ void Game::InitLevels() {
 		e5.startTime = 2000;
 		e5.count = 50;
 		e5.type = eType::normal;
+		e5.hp = 1;
 		e5.interval = 100;
 		e5.startX = LeftEdge + WIDTH; e5.startY = CentralY + 50;
 		e5.moveLogic = Moves::shuttle(10, 0);
@@ -179,6 +182,7 @@ void Game::InitLevels() {
 		e6.count = 20; 		
 		e6.interval = 400; 
 		e6.type = eType::normal; 
+		e6.hp = 1;
 		e6.startX = CentralX - 200; e6.startY = TopEdge; 
 		e6.moveLogic = Moves::SineWave(CentralX - 200, 50, 2.0f, 3.0f);
 		
@@ -187,6 +191,7 @@ void Game::InitLevels() {
 		e7.count = 20;
 		e7.interval = 400;
 		e7.type = eType::normal;
+		e7.hp = 1;
 		e7.startX = CentralX + 200; e7.startY = TopEdge;
 		e7.moveLogic = Moves::SineWave(CentralX + 200, 50, 2.0f, 3.0f);
 
@@ -619,7 +624,7 @@ void Game::CheckCollision() {
 			// --- A. 获取敌人判定参数 ---
 			float eCx = enemy->x;
 			float eCy = enemy->y;
-			float enemyR = 12.0f;
+			float enemyR = 15.0f;
 			if (enemy->type == eType::elf) enemyR = 32.0f;
 			else if (enemy->type == eType::boss) enemyR = 30.0f; // 大精灵18，小兵12
 			// --- B. AABB 粗筛 (性能优化) ---
