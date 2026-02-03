@@ -6,14 +6,11 @@
 AudioManager::AudioManager() { loaded = false; }
 
 AudioManager::~AudioManager() {
-	// 关闭所有打开的音频设备
 	mciSendString(L"close all", NULL, 0, NULL);
 }
 
 void AudioManager::init() {
 	if (loaded) return;
-
-	// 在这里注册你的音效文件路径和别名
 	sounds[L"fire"] = L"resource/sound/fire.wav";
 	sounds[L"hit"] = L"resource/sound/se_damage00.wav";
 	sounds[L"break"] = L"resource/sound/se_enep00.wav"; 
@@ -27,7 +24,7 @@ void AudioManager::init() {
 	sounds[L"bgm_stage1"] = L"resource/bgm/【東方風神録】～ 神々が恋した幻想郷 ～　.mp3";
 	sounds[L"bgm_boss"] = L"resource/bgm/【東方風神録】～ 信仰は儚き人間の為に ～　.mp3";
 
-	// 预加载 (打开设备)
+	// 预加载 
 	for (auto const& [alias, path] : sounds) {
 		std::wstring cmd = L"open \"" + path + L"\" alias " + alias;
 		mciSendString(cmd.c_str(), NULL, 0, NULL);
@@ -41,7 +38,7 @@ void AudioManager::playFast(const std::wstring& path) {
 }
 
 void AudioManager::play(const std::wstring& name) {
-	// 针对容易卡顿的高频音效，改用 PlaySound
+	// PlaySound
 	if ( name == L"break" || name == L"clear") {
 		if (sounds.find(name) != sounds.end()) {
 			playFast(sounds[name]);
@@ -49,33 +46,29 @@ void AudioManager::play(const std::wstring& name) {
 		return;
 	}     
 
-	// 其他长音效（如 spell, bgm）继续用 MCI
+	// MCI
 	if (sounds.find(name) == sounds.end()) return;
 	std::wstring cmd = L"play " + name + L" from 0";
 	mciSendString(cmd.c_str(), NULL, 0, NULL);
 }
 
 void AudioManager::playBGM(const std::wstring& name) {
-	// 1. 如果请求的 BGM 已经在播放，直接返回，避免重头开始
+	// 如果请求的 BGM 已经在播放，直接返回
 	if (currentBGM == name) return;
 
-	// 2. 如果当前有 BGM 在播放，先停止它
+	// 如果当前有 BGM 在播放，先停止它
 	if (!currentBGM.empty()) {
 		std::wstring cmdStop = L"stop " + currentBGM;
 		mciSendString(cmdStop.c_str(), NULL, 0, NULL);
 	}
-
-	// 3. 检查新 BGM 是否存在
 	if (sounds.find(name) == sounds.end()) {
-		currentBGM = L""; // 找不到就置空
+		currentBGM = L""; 
 		return;
 	}
 
-	// 4. 播放新 BGM (加上 repeat 关键字实现循环)
+	// BGM 
 	std::wstring cmdPlay = L"play " + name + L" repeat";
 	mciSendString(cmdPlay.c_str(), NULL, 0, NULL);
-
-	// 5. 更新记录
 	currentBGM = name;
 }
 

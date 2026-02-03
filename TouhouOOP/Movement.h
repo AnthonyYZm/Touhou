@@ -6,7 +6,7 @@
 // 移动策略库
 namespace Moves {
 
-    // 1. 直线移动 (参数：X轴速度，Y轴速度)
+    // 直线移动 
     static MoveStrategy Linear(float vx, float vy) {
         return [=](Enemy* e, int t) {
             e->x += vx;
@@ -15,7 +15,6 @@ namespace Moves {
     }
 
     // 2. 正弦波移动 (参数：中心X，振幅，频率，下落速度)
-    // 效果：一边下落一边左右摇摆
     static MoveStrategy SineWave(float centerX, float amplitude, float freq, float speedY) {
         return [=](Enemy* e, int t) {
             e->y += speedY; // Y轴匀速
@@ -24,14 +23,12 @@ namespace Moves {
             };
     }
 
-    // 3. 悬停 (参数：目标Y，进场速度)
-    // 效果：飞到指定Y高度后停住
+    // 3. 悬停 
     static MoveStrategy Hover(float targetY, float speed) {
         return [=](Enemy* e, int t) {
             if (e->y < targetY) {
                 e->y += speed;
             }
-            // 到达后不动，或者可以在这里加微小的浮动
             };
     }
 
@@ -97,6 +94,4 @@ namespace Moves {
             }
             };
     }
-
-    // 4. 贝塞尔曲线或追踪逻辑可在此处扩展...
 }

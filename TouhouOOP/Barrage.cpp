@@ -51,13 +51,13 @@ void Barrage::reset() {
 
 void Barrage::draw() {
 	if (isFriendly) {
-		// 大玉 (256x256)，显示大小 200x200
+		// 大玉
 		int drawW = 200;
 		int drawH = 200;
 		putimagePNG((int)(x - drawW / 2), (int)(y - drawH / 2), 256, 256, &mxtsSpell, 0, 0, drawW, drawH);
 	}
 	else {
-		// 普通中弹 (24x24)
+		// 中弹 
 		int halfW = darkGreenWidth / 2;
 		int halfH = darkGreenHeight / 2;
 		putimagePNG((int)(x - halfW), (int)(y - halfH), darkGreenWidth, darkGreenHeight, &barr1, 0, 0, darkGreenWidth, darkGreenHeight);
@@ -82,12 +82,10 @@ void Barrage::move() {
 		x = centerX + radius * cos(currentAngle);
 		y = centerY + radius * sin(currentAngle);
 	}
-	else if (moveType == 3) {
-		// 阶段1: 悬停等待 
+	else if (moveType == 3) { 
 		if (GetTickCount() < t1) {
 			return;
 		}
-		// 阶段2: 物理释放
 		vx += centerX;
 		vy += centerY;
 		x += vx;
@@ -134,15 +132,12 @@ void Barrage::directionalMill(Enemy& e, float speed, float baseAngle, int num, i
 	if (e.isAlive() && e.fire) {
 		for (int i = 0; i < num; ++i) {
 			Barrage* newBarrage = new Barrage(x0, y0);
-
-			// 关键：角度完全由传入的 baseAngle 决定
 			float angle = i * (360.0f / num) + baseAngle;
 			float rad = angle * PI / 180.0f;
-
 			newBarrage->vx = speed * cos(rad);
 			newBarrage->vy = speed * sin(rad);
 			newBarrage->alive = true;
-			newBarrage->moveType = 0; // 直线运动
+			newBarrage->moveType = 0; 
 			barrList.push_back(newBarrage);
 		}
 	}
@@ -191,7 +186,7 @@ void Barrage::wheel(Enemy& e, float speed, float vl, int num, int x0, int y0) {
 			newBarrage->moveType = 2;
 			newBarrage->centerX = (float)x0;
 			newBarrage->centerY = (float)y0;
-			newBarrage->radius = 10; // 初始半径
+			newBarrage->radius = 10; 
 			newBarrage->rSpeed = speed;
 			newBarrage->omega = vl / radius;
 
@@ -199,7 +194,6 @@ void Barrage::wheel(Enemy& e, float speed, float vl, int num, int x0, int y0) {
 			newBarrage->lock = true;
 			newBarrage->groupID = batchID;
 
-			// 计算第一帧
 			newBarrage->x = newBarrage->centerX + newBarrage->radius * cos(newBarrage->currentAngle);
 			newBarrage->y = newBarrage->centerY + newBarrage->radius * sin(newBarrage->currentAngle);
 			newBarrage->alive = true;
@@ -237,7 +231,7 @@ void Barrage::pincerAim(Enemy& e, float targetX, float targetY, float speed, int
 
 void Barrage::randomRain(float speed) {
 	int rndX = rand() % (int(LeftEdge), int(screenWidth + LeftEdge - darkGreenWidth));
-	Barrage* newBarrage = new Barrage((float)rndX, TopEdge); // y 固定为 0
+	Barrage* newBarrage = new Barrage((float)rndX, TopEdge); 
 	newBarrage->vx = 0;          
 	newBarrage->vy = speed;    
 	newBarrage->alive = true;
@@ -248,22 +242,22 @@ void Barrage::randomRain(float speed) {
 void Barrage::fiveStar(Enemy& e, int currentStep, int totalSteps, float R_orbit, float r_star, float stretchSpeed, float normalAcc, DWORD releaseTime, int starCount, int x0, int y0) {
 	if (!e.isAlive()) return;
 
-	// 1. 计算归一化进度 (仍然是 * 5.0f，因为我们在画五角星)
+	// 计算归一化进度 
 	float normalizedProgress = (float)currentStep / (float)totalSteps * 5.0f;
 	int edgeIdx = (int)normalizedProgress;
 	if (edgeIdx >= 5) edgeIdx = 4;
 	float t = normalizedProgress - (float)edgeIdx;
 
-	// 2. 确定顶点 (不变)
+	// 确定顶点 
 	int indices[] = { 4, 1, 3, 0, 2, 4 };
 	POINTFLOAT pStart = getStarVertex(indices[edgeIdx], r_star);
 	POINTFLOAT pEnd = getStarVertex(indices[edgeIdx + 1], r_star);
 
-	// 计算位置 (不变)
+	// 计算位置
 	float lx = pStart.x + (pEnd.x - pStart.x) * t;
 	float ly = pStart.y + (pEnd.y - pStart.y) * t;
 
-	// 3. 计算物理参数 (不变)
+	// 计算参数
 	float dx = pEnd.x - pStart.x;
 	float dy = pEnd.y - pStart.y;
 	float len = sqrt(dx * dx + dy * dy);
@@ -274,7 +268,6 @@ void Barrage::fiveStar(Enemy& e, int currentStep, int totalSteps, float R_orbit,
 	float stretchFactor = (t - 0.5f) * 2.0f;
 	float vx_tan = ux * stretchFactor * stretchSpeed;
 	float vy_tan = uy * stretchFactor * stretchSpeed;
-
 	float nx = -uy;
 	float ny = ux;
 
@@ -290,24 +283,18 @@ void Barrage::fiveStar(Enemy& e, int currentStep, int totalSteps, float R_orbit,
 	float ax = nx * currentAcc;
 	float ay = ny * currentAcc;
 
-	// 4. 生成子弹 [核心修改]
-	// 使用传入的 starCount 来决定生成多少个星星
+	// 生成子弹 
 	for (int i = 0; i < starCount; ++i) {
-		// 角度间隔根据 starCount 自动计算
 		float orbitAng = -PI / 2.0f + i * (2.0f * PI / (float)starCount);
-
 		float cx = x0 + R_orbit * cos(orbitAng);
 		float cy = y0 + R_orbit * sin(orbitAng);
-
 		Barrage* b = new Barrage(cx + lx, cy + ly);
-
 		b->moveType = 3;
 		b->vx = vx_tan;
 		b->vy = vy_tan;
 		b->centerX = ax;
 		b->centerY = ay;
 		b->t1 = releaseTime;
-
 		b->alive = true;
 		b->lock = true;
 		b->groupID = globalGroupID;
@@ -316,17 +303,16 @@ void Barrage::fiveStar(Enemy& e, int currentStep, int totalSteps, float R_orbit,
 	}
 }
 void Barrage::update() {
-	// 1. 统计还活跃的组
+	// 统计还活跃的组
 	std::set<int> groupsInside;
 	for (auto* b : barrList) {
-		b->move(); // 移动并检测 outBound
+		b->move(); 
 		b->collision();
 		if (b->lock && !b->outBound) {
 			groupsInside.insert(b->groupID);
 		}
 	}
-
-	// 2. 解锁已完全出界的组
+	// 解锁已完全出界的组
 	for (auto* b : barrList) {
 		if (b->lock && b->groupID != -1) {
 			if (groupsInside.find(b->groupID) == groupsInside.end()) {
@@ -334,12 +320,10 @@ void Barrage::update() {
 			}
 		}
 	}
-
-	// 3. 物理删除
+	// 删除
 	for (auto it = barrList.begin(); it != barrList.end(); ) {
 		Barrage* b = *it;
 		if (b->isAlive()) {
-			// 只绘制在屏幕内的
 			if (!b->outBound) b->draw();
 			++it;
 		}

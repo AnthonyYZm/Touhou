@@ -18,7 +18,6 @@ struct SpawnEvent {
 	MoveStrategy moveLogic; // 移动策略
 	std::vector<BarrageTask> initTasks; // 初始携带的弹幕任务
 
-	// 如果是 Boss，直接传入 Boss 对象指针 (可选)
 	Boss* bossInstance = nullptr;
 	int spawnedCount = 0; 
 	DWORD lastSpawnTime = 0;

@@ -50,17 +50,16 @@ void Hero::JudgePoint() {
 	setlinecolor(RED);
 	setfillcolor(WHITE);
 	fillcircle((int)x, (int)y, JudgeR);
-	// This point is located at the bottom center of the hero sprite
 }	
 
-/*Hero control by arrow key*/
+// Hero control by arrow key
 void Hero::control(float speed) {
 	if (GetAsyncKeyState(VK_LEFT) && GetAsyncKeyState(VK_UP) || GetAsyncKeyState(VK_RIGHT) && GetAsyncKeyState(VK_UP) ||
 		GetAsyncKeyState(VK_LEFT) && GetAsyncKeyState(VK_DOWN) || GetAsyncKeyState(VK_RIGHT) && GetAsyncKeyState(VK_DOWN)) {
-		speed /= 1.414f;    // Adjust speed for diagonal movement	б���˶�ʱ�ٶ�/��2
+		speed /= 1.414f;    
 	}
 	if (GetAsyncKeyState(VK_LSHIFT) & 0x8000) {
-		speed *= 0.6f; // Slow down when holding Shift key	��סShift������
+		speed *= 0.6f; // 按下Shift键减速
 		JudgePoint();
 	}
 	if (GetAsyncKeyState(VK_UP) & 0x8000) {
@@ -78,7 +77,7 @@ void Hero::control(float speed) {
 
 }
 
-/*Hero move and set boundary*/
+// Hero move and set boundary
 void Hero::move() {
 	if (invincible && GetTickCount() > invincibleEnd) {
 		invincible = false;

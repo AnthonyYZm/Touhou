@@ -54,17 +54,16 @@ void Bullet::createBullet(Hero* hero, int type, const std::vector<Enemy*>& enemi
             float offset = 3;
             float hx = hero->x - offset;
             float hy = hero->y - 10.0f - offsetDistance - offset;
-            // 获取当前火力
+            // 当前火力
             int p = hero->getPower();
-
-            // --- 模式 1: 初始状态 (1发) ---
+            // 初始状态 (1发)
             if (p < 30) {
                 Bullet* b = new Bullet(hx, hy);
                 b->setVelocity(0, -b->speed);
                 b->alive = true;
                 bulletList.push_back(b);
             }
-            // --- 模式 2: 双发 (火力 >= 10) ---
+            // 双发 
             else if (p >= 30 && p < 50) {
                 Bullet* b1 = new Bullet(hx - 8, hy);
                 Bullet* b2 = new Bullet(hx + 8, hy);
@@ -74,7 +73,7 @@ void Bullet::createBullet(Hero* hero, int type, const std::vector<Enemy*>& enemi
                 bulletList.push_back(b1);
                 bulletList.push_back(b2);
             }
-            // --- 模式 3: 三发散射 (火力 >= 30) ---
+            // 三发散射
             else {
                 Bullet* center1 = new Bullet(hx - 8, hy);
                 Bullet* center2 = new Bullet(hx + 8, hy);
@@ -84,10 +83,9 @@ void Bullet::createBullet(Hero* hero, int type, const std::vector<Enemy*>& enemi
                 bulletList.push_back(center1);
                 bulletList.push_back(center2);
 
-                // 2. 计算诱导子弹的目标
+                // 计算子弹的目标
                 Enemy* target = nullptr;
-                float minDistSq = 100000000.0f; // 很大的初始值
-
+                float minDistSq = 100000000.0f; 
                 // 寻找最近的存活敌人
                 for (auto* e : enemies) {
                     if (!e->isAlive()) continue;
@@ -99,16 +97,10 @@ void Bullet::createBullet(Hero* hero, int type, const std::vector<Enemy*>& enemi
                         target = e;
                     }
                 }
-
-                Bullet* leftB = new Bullet(hx - 24, hy + 5); // 左翼发射点
-                Bullet* rightB = new Bullet(hx + 24, hy + 5); // 右翼发射点
-
-                float speed = leftB->speed; // 基础速度
-
+                Bullet* leftB = new Bullet(hx - 24, hy + 5); 
+                Bullet* rightB = new Bullet(hx + 24, hy + 5); 
+                float speed = leftB->speed; 
                 if (target) {
-                    // --- 锁定目标模式 ---
-                    // 计算指向敌人的角度
-                    // atan2(y, x) 返回弧度
                     float angleL = atan2(target->y - leftB->y, target->x - leftB->x);
                     float angleR = atan2(target->y - rightB->y, target->x - rightB->x);
 
@@ -116,12 +108,9 @@ void Bullet::createBullet(Hero* hero, int type, const std::vector<Enemy*>& enemi
                     rightB->setVelocity(speed * cos(angleR), speed * sin(angleR));
                 }
                 else {
-                    // --- 无目标模式 (斜向发射) ---
-                    // 左边向左上 (-90 - 20度)，右边向右上 (-90 + 20度)
-                    // -90度 = -PI/2
+                    // 无目标模式 (斜向发射)
                     float offsetAngle = 20.0f * (PI / 180.0f);
                     float baseAngle = -PI / 2.0f;
-
                     float angleL = baseAngle - offsetAngle;
                     float angleR = baseAngle + offsetAngle;
 

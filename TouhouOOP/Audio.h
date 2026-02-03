@@ -5,7 +5,6 @@
 
 class AudioManager {
 private:
-	// 存储音效别名对应的文件路径
 	std::map<std::wstring, std::wstring> sounds;
 	std::wstring currentBGM;
 	bool loaded;

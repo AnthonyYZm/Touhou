@@ -248,7 +248,7 @@ void Game::InitLevels() {
 				Game::Effects.spawn(EffectType::SPELL_CUTIN, 0, 0, false);
 				Game::Effects.spawn(EffectType::SPELL_NAME, 0, 0, false);
 				Game::BG.setMode(BGMode::BOSS_SPELL);
-				Game::Barr.clearBarrage(); // 消除旧子弹
+				Game::Barr.clearBarrage(); 
 			}
 			else if (id == 2) { // 阶段击破
 				Game::Audio.play(L"damage");
@@ -286,18 +286,18 @@ void Game::InitLevels() {
 		// burstInterval: 10 (每笔间隔10ms，作画总耗时 1秒)
 		omega = 1.618 * */
 		p1.tasks.push_back(BarrageTask(
-			(int)bType::star_fall,      // type
-			5000,                       // interval
-			1.0,                       // speed (stretch)
-			162.0f,                     // omega (Orbit Radius)
-			5,                          // num
-			1500,                        // r (Pause Time)
-			1,                          // dir
-			100,                         // x0 (Star Radius)
-			0,                          // y0
-			0.05f,                       // acc (Normal Acc)
-			40,                        // burstCount
-			15                         // burstInterval
+			(int)bType::star_fall,      
+			5000,                      
+			1.0,                      
+			162.0f,                     
+			5,                         
+			1500,                        
+			1,                         
+			100,                         
+			0,                          
+			0.05f,                       
+			40,                        
+			15                         
 		));
 		sanae->addPhase(p1);
 		}
@@ -330,12 +330,12 @@ void Game::InitLevels() {
 		);
 		p3.tasks.push_back(BarrageTask(
 			(int)bType::windmill_switching,
-			100,             // [interval] 发射间隔 (越小线条越密集)
-			3.0f,           // [speed] 子弹飞行速度
-			8.0f,           // [omega] 旋转角速度 (每发旋转4度)
-			8,              // [num] 几条旋臂 (4叶风车)
+			100,             // interval 发射间隔 (越小线条越密集)
+			3.0f,           // speed 子弹飞行速度
+			8.0f,           // omega 旋转角速度 (每发旋转4度)
+			8,              // num 几条旋臂 (4叶风车)
 			200,              // 停顿
-			1,              // [dir] 初始方向 (1:顺时针)
+			1,              // dir 初始方向 (1:顺时针)
 			0, 0,           // x0, y0
 			0,              // burstCount (未使用)
 			0,        // burstCount (unused)
@@ -345,10 +345,10 @@ void Game::InitLevels() {
 		// phase4
 		{
 		BossPhase p4(
-			800,   // 血量更多
-			45000,  // 限时 45秒
-			Moves::MoveTo(CentralX, CentralY, 80.0f), // 移动逻辑：原地不动
-			true  // 是符卡
+			800,   
+			45000,  
+			Moves::MoveTo(CentralX, CentralY, 80.0f), 
+			true  
 		);
 		
 		p4.tasks.push_back(BarrageTask((int)bType::firework, 500, 3.0f, 0, 24));
@@ -367,18 +367,18 @@ void Game::InitLevels() {
 			1000
 		);
 		p5.tasks.push_back(BarrageTask(
-			(int)bType::star_fall,      // type
-			5000,                       // interval
-			0.5,                       // speed (stretch)
-			370.0f,                     // omega (Orbit Radius)
-			12,                          // num
-			1500,                        // r (Pause Time)
-			1,                          // dir
-			100,                         // x0 (Star Radius)
-			0,                          // y0
-			0.05f,                       // acc (Normal Acc)
-			40,                        // burstCount
-			15                         // burstInterval
+			(int)bType::star_fall,      
+			5000,                      
+			0.5,                       
+			370.0f,                     
+			12,                         
+			1500,                        
+			1,                          
+			100,                         
+			0,                          
+			0.05f,                       
+			40,                        
+			15                         
 		));
 		sanae->addPhase(p5);
 		}
@@ -430,7 +430,6 @@ void Game::Bullets() {
 void Game::Barrages() {
 	DWORD now = GetTickCount();
 
-	// 1. 遍历所有敌人
 	for (auto* en : E.getList()) {
 		if (en == nullptr) continue;
 		if (!en->isAlive()) continue;
@@ -439,7 +438,7 @@ void Game::Barrages() {
 		int centerX = (int)en->x;
 		int centerY = (int)en->y;
 
-		// 3. 执行任务
+		// 执行任务
 		for (auto& task : en->GetTasks()) {
 
 			if (task.type == (int)bType::windmill_switching) {
@@ -542,7 +541,7 @@ void Game::Enemies() {
 }
 
 void Game::UpdateItems() {
-	// 1. 生成新道具 (从 EnemyManager 获取掉落请求)
+	// 生成新道具 (从 EnemyManager 获取掉落请求)
 	auto drops = E.popDrops();
 	for (auto& d : drops) {
 		for (int i = 0; i < d.count; ++i) {
@@ -554,16 +553,14 @@ void Game::UpdateItems() {
 		}
 	}
 
-	// 2. 移动与拾取
+	// 移动与拾取
 	float heroCx = Hero.x + Hero::getWidth() / 2;
 	float heroCy = Hero.y + Hero::getHeight() / 2;
-	//bool highPower = (Hero.y < HEIGHT / 3); // "收点线"：如果在屏幕上方 1/3，全屏吸附
 
 	for (auto it = items.begin(); it != items.end(); ) {
 		Item* item = *it;
 
 		// 磁力判断
-		// 距离吸附 (比如 100 像素内)
 		float dx = item->x - heroCx;
 		float dy = item->y - heroCy;
 		if (dx * dx + dy * dy < 100 * 100) item->setMagnet(true);
@@ -584,8 +581,8 @@ void Game::UpdateItems() {
 
 		item->draw();
 
-		// 拾取检测 (距离非常近)
-		if (checkCircleCollide(item->x + 8, item->y + 8, 8, heroCx, heroCy, 16)) { // 16是自机拾取半径
+		// 拾取检测 
+		if (checkCircleCollide(item->x + 8, item->y + 8, 8, heroCx, heroCy, 16)) { 
 			Hero.addPower(1);
 			delete item;
 			it = items.erase(it);
@@ -621,13 +618,12 @@ void Game::CheckCollision() {
 			Enemy* enemy = *it;
 			if (!enemy->isAlive()) { ++it; continue; }
 
-			// --- A. 获取敌人判定参数 ---
 			float eCx = enemy->x;
 			float eCy = enemy->y;
 			float enemyR = 15.0f;
 			if (enemy->type == eType::elf) enemyR = 32.0f;
 			else if (enemy->type == eType::boss) enemyR = 30.0f; // 大精灵18，小兵12
-			// --- B. AABB 粗筛 (性能优化) ---
+			// 粗筛 (性能优化) 
 			// 如果 x 或 y 轴的投影距离超过半径之和，绝对不可能相撞
 			float rSum = bulletR + enemyR;
 			float dx = std::abs(bCx - eCx);
@@ -669,7 +665,7 @@ void Game::CheckCollision() {
 						EnemyManager::DropReq req = { eCx, eCy, 1 };
 						if (enemy->type == eType::elf) req.count = 5;
 						E.dropQueue.push_back(req);
-						Hero::addScore(1000); // 普通分
+						Hero::addScore(1000); 
 
 						delete enemy;
 						it = enemies.erase(it);
@@ -726,7 +722,7 @@ void Game::CheckCollision() {
 	// 符卡碰撞逻辑
 	if (isSpellActive && !spellBarrages.empty()) {
 
-		// 1. 符卡弹幕 vs 敌方弹幕
+		// 符卡弹幕 vs 敌方弹幕
 		for (auto& eb : Barr.barrList) { 
 			if (!eb->alive) continue;
 			float sbx = eb->x - Hero.x;
@@ -741,7 +737,7 @@ void Game::CheckCollision() {
 			}
 		}
 		
-		// 2. 符卡弹幕 vs 敌人
+		// 符卡弹幕 vs 敌人
 		for (auto* enemy : E.getList()) {
 			if (!enemy->isAlive()) continue;
 			float enx = enemy->x - Hero.x;
@@ -771,7 +767,7 @@ void Game::updateBoss() {
 	Boss* boss = nullptr;
 	for (auto* e : E.getList()) {
 		if (e->type == eType::boss) {
-			boss = (Boss*)e; // 强制转换
+			boss = (Boss*)e; 
 			break;
 		}
 	}
@@ -788,11 +784,11 @@ void Game::updateBoss() {
 	bool isSpell = boss->isSpellCardState();
 	int timeLeft = boss->getPhaseTimeLeft();
 
-	// 绘制 Boss 血条 (屏幕正上方)
+	// 绘制 Boss 血条 
 	int barW = 400; // 血条总宽
 	int barH = 10;  // 血条高度
-	int barX = (WIDTH - barW) / 2; // 居中
-	int barY = 30;  // 距离顶部 30 像素
+	int barX = (WIDTH - barW) / 2; 
+	int barY = 30;  // 距离顶部 30 
 
 	// 绘制背景槽 (灰色)
 	setfillcolor(RGB(50, 50, 50));
@@ -809,14 +805,13 @@ void Game::updateBoss() {
 	setlinecolor(WHITE);
 	rectangle(barX, barY, barX + barW, barY + barH);
 
-	// B. 绘制数字计时器 (屏幕右上角)
+	// 绘制数字计时器 
 	settextstyle(24, 0, L"Arial");
 	// 倒计时少于 10 秒变红，否则白色
 	if (timeLeft <= 10) settextcolor(RED);
 	else settextcolor(BLUE);
 	wchar_t timeStr[16];
-	swprintf_s(timeStr, L"%02d", timeLeft); // 格式化为两位数字
-	// 绘制在右上角 (留出一点边距)
+	swprintf_s(timeStr, L"%02d", timeLeft);
 	outtextxy(WIDTH - 50, 25, timeStr);
 	settextcolor(WHITE);
 }
@@ -829,7 +824,7 @@ void Game::CastSpellCard() {
 	ClearSpellBarrages();
 
 	isSpellActive = true;
-	spellRadius = 10.0f; // 初始半径为0（从自机身体里钻出来）
+	spellRadius = 10.0f; // 初始半径
 	spellAngle = 0.0f;  // 初始角度
 	Game::Audio.play(L"spell");
 	Game::Effects.spawn(EffectType::SPELL_CUTIN, 0, 0, true);
@@ -839,7 +834,6 @@ void Game::CastSpellCard() {
 		Barrage* b = new Barrage(Hero.x, Hero.y);
 		b->isFriendly = true; // 标记为友军
 		b->alive = true;
-		// 这里不需要设置 vx/vy，因为我们会手动控制它的 x,y
 		spellBarrages.push_back(b);
 	}
 
@@ -852,43 +846,36 @@ void Game::CastSpellCard() {
 void Game::UpdateSpellCard() {
 	if (!isSpellActive) return;
 
-	// 1. 更新运动参数
-	spellRadius += 3.5f; // 半径扩大速度 (数值越大扩散越快)
+	// 更新运动参数
+	spellRadius += 3.5f; // 半径扩大速度 
 	spellAngle += 0.1f;  // 旋转角速度
 
-	// 获取自机中心点
 	float heroCx = Hero.x;
 	float heroCy = Hero.y;
+	bool allOut = true;
 
-	bool allOut = true; // 标记是否所有弹幕都飞出屏幕
-
-	// 2. 更新每个弹幕的位置
+	// 更新每个的位置
 	for (int i = 0; i < spellBarrages.size(); ++i) {
 		Barrage* b = spellBarrages[i];
 
-		// 计算当前弹幕的角度 (四个弹幕分别偏移 0, 90, 180, 270 度)
+		// 四个弹幕分别偏移 0, 90, 180, 270 度
 		float currentB_Angle = spellAngle + i * (3.14159f / 2.0f);
 
-		// [核心算法] 圆周运动坐标公式
 		// x = 圆心x + 半径 * cos(角度)
 		b->x = heroCx + spellRadius * cos(currentB_Angle) - Barrage::getDarkGreenWidth() / 2;
 		b->y = heroCy + spellRadius * sin(currentB_Angle) - Barrage::getDarkGreenHeight() / 2;
-
-		// 绘制
 		b->draw();
 
 		// 检查是否还在屏幕内 (只要有一个在屏幕内，符卡就不算结束)
-		// 稍微放宽一点边界判断 (-100)，保证完全飞出去了才算结束
 		if (b->x > -100 && b->x < WIDTH + 100 && b->y > -100 && b->y < HEIGHT + 100) {
 			allOut = false;
 		}
 	}
-
-	// 3. 结束判定：如果半径很大了，且所有弹幕都出界了
+	// 如果半径很大了，且所有弹幕都出界了
 	if (allOut && spellRadius > WIDTH) {
 		isSpellActive = false;
-		Hero.invincible = false; // 取消无敌
-		ClearSpellBarrages();    // 清空对象
+		Hero.invincible = false; 
+		ClearSpellBarrages();    
 	}
 }
 
@@ -898,10 +885,9 @@ void Game::ClearSpellBarrages() {
 }
 
 void Game::DrawDebug() {
-	// 只有在按下 TAB 键时显示调试信息
 	if ((GetAsyncKeyState(VK_TAB) & 0x8000) == 0) return;
 
-	// 1. 绘制敌人中心和判定圈
+	// 绘制敌人中心和判定圈
 	for (auto* e : E.getList()) {
 		if (!e->isAlive()) continue;
 		setlinecolor(RED);

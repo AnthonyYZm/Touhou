@@ -3,9 +3,9 @@
 
 // 弹幕任务结构体 
 struct BarrageTask {
-	int type;           // 弹幕类型 (对应 bType 枚举转 int)
+	int type;           // 弹幕类型 
 	DWORD lastTime;     // 上一次发射的时间
-	int interval;       // 发射间隔 (ms)
+	int interval;       // 发射间隔 
 	float speed;        // 速度
 	float omega;        // 角速度 或 半径参数
 	int num;            // 数量
@@ -19,7 +19,6 @@ struct BarrageTask {
     float currentAngle;
 	DWORD lastBurstTime; // 上一发时间
 
-	// 构造函数
     BarrageTask(int _type, int _interval, float _speed, float _omega, int _num, int _r = 0, 
         int _dir = 1, int _x = 0, int _y = 0, float _speedDec = 0.0f, 
         int _burstCount = 1, int _burstInterval = 0) {
@@ -85,8 +84,7 @@ inline void putimagePNG(int x, int y, int srcW, int srcH, IMAGE* srcImg, int sx,
     int dstTotalWidth = getwidth();
     int dstTotalHeight = getheight();
 
-    // 定义允许绘制的裁剪区域 (Clip Region)
-    // 如果你想让特效只显示在游戏框内：
+    // 定义允许绘制的裁剪区域
     int clipLeft = LeftEdge;
     int clipTop = TopEdge;
     int clipRight = LeftEdge + WIDTH;
@@ -94,9 +92,7 @@ inline void putimagePNG(int x, int y, int srcW, int srcH, IMAGE* srcImg, int sx,
 
     for (int i = 0; i < dstH; i++) {
         int screenY = y + i;
-        // 1. 屏幕物理边界检查
         if (screenY < 0 || screenY >= dstTotalHeight) continue;
-        // 2. 游戏逻辑边界检查 (Clip)
         if (screenY < clipTop || screenY >= clipBottom) continue;
 
         int sourceY = sy + (i * srcH) / dstH;
@@ -104,9 +100,7 @@ inline void putimagePNG(int x, int y, int srcW, int srcH, IMAGE* srcImg, int sx,
 
         for (int j = 0; j < dstW; j++) {
             int screenX = x + j;
-            // 1. 屏幕物理边界检查
             if (screenX < 0 || screenX >= dstTotalWidth) continue;
-            // 2. 游戏逻辑边界检查 (Clip)
             if (screenX < clipLeft || screenX >= clipRight) continue;
 
             int sourceX = sx + (j * srcW) / dstW;

@@ -69,8 +69,8 @@ public:
 	bool isFire() const { return fire; }
 	bool isAlive() const { return alive; }
 	void setStrategy(MoveStrategy ms) { mover = ms; }	
-	void EnemyX(); //set round's enemyX
-	// Ìí¼ÓÈÎÎñ
+	void EnemyX(); 
+
 	void AddTask(BarrageTask task) { tasks.push_back(task); }
 	void ClearTasks() {	tasks.clear(); }
 	std::vector<BarrageTask>& GetTasks() { return tasks; }

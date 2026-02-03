@@ -38,7 +38,7 @@ public:
 	void control(float speed);
 	void JudgePoint();	
 
-	void hit(); // ±»»÷ÖÐ
+	void hit(); 
 	void addPower(int p);
 	static void addScore(int s);
 	bool tryUseBomb();
