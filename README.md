@@ -1,7 +1,5 @@
 # TouhouOOP - 东方 Project C++ 仿作项目
 
-## 本项目仍在开发中，目前展示内容为Demo版本
-
 ---
 
 * 一个基于 **C++** 和 **EasyX** 图形库开发的东方 Project STG游戏。本项目实现了动态波次系统，可自由配置敌人。
@@ -32,7 +30,6 @@
 ## 开发环境要求
 
 * Windows 10/11
-* Visual Studio 2022+
 * 已安装 EasyX 图形库
 
  ---
