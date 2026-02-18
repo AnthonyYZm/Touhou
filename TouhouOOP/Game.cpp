@@ -8,7 +8,8 @@ EffectManager Game::Effects;
 BackgroundManager Game::BG;
 
 Game::Game() {
-	initgraph(WIDTH, HEIGHT);
+	initgraph(screenWidth, screenHeight);
+	adjustWindow();
 	enemyFire = false;
 	wait = false;	
 	bulletLevel = 1;
@@ -28,7 +29,8 @@ Game::~Game() {
 }
 
 void Game::Touhou() {
-	Scr.gameScreen();
+	initgraph(screenWidth, screenHeight);
+	setbkcolor(WHITE);
 	BeginBatchDraw();
 
 	const int FPS = 60;
@@ -45,6 +47,7 @@ void Game::Touhou() {
 		Effects.draw();
 		HeroControl();
 		Bullets();
+		drawUI();
 		
 		FlushBatchDraw();
 
@@ -97,7 +100,7 @@ void Game::handleBGM() {
 		}
 	}
 	if (isBossAlive) {
-		Game::Audio.playBGM(L"bgm_boss");
+		Game::Audio.playBGM(L"bgm_sanae");
 	}
 	else {
 		Game::Audio.playBGM(L"bgm_stage1");
@@ -105,7 +108,7 @@ void Game::handleBGM() {
 }
 
 void Game::InitLevels() {
-	
+
 	{
 		// 第一波
 		waveData w1;
@@ -119,7 +122,7 @@ void Game::InitLevels() {
 		e1.startX = CentralX; e1.startY = TopEdge; // 起始位置
 		e1.moveLogic = Moves::SineWave(CentralX, 50, 2.0f, 3.0f); // 设定移动逻辑
 		//e1.initTasks.push_back(BarrageTask((int)bType::down_st, 500, 5.0f, 0, 1)); // 弹幕任务
-		w1.events.push_back(e1); 
+		w1.events.push_back(e1);
 		waveQueue.push(w1);
 
 		// 第二波
@@ -134,7 +137,7 @@ void Game::InitLevels() {
 		e2.startX = CentralX + 200; e2.startY = TopEdge;
 		e2.moveLogic = Moves::Hover(CentralY, 2.0f);
 		e2.initTasks.push_back(BarrageTask((int)bType::windmill_st, 120, 4.0f, 5, 1));
-		
+
 		SpawnEvent e3;
 		e3.startTime = 2000;
 		e3.count = 1;
@@ -150,7 +153,7 @@ void Game::InitLevels() {
 		// 第三波
 		waveData w3;
 		w3.waveDelay = 2000;
-		
+
 		SpawnEvent e4;
 		e4.startTime = 2000;
 		e4.count = 50;
@@ -178,14 +181,14 @@ void Game::InitLevels() {
 		waveData w4;
 		w4.waveDelay = 2000;
 		SpawnEvent e6;
-		e6.startTime = 500; 
-		e6.count = 20; 		
-		e6.interval = 400; 
-		e6.type = eType::normal; 
+		e6.startTime = 500;
+		e6.count = 20;
+		e6.interval = 400;
+		e6.type = eType::normal;
 		e6.hp = 1;
-		e6.startX = CentralX - 200; e6.startY = TopEdge; 
+		e6.startX = CentralX - 200; e6.startY = TopEdge;
 		e6.moveLogic = Moves::SineWave(CentralX - 200, 50, 2.0f, 3.0f);
-		
+
 		SpawnEvent e7;
 		e7.startTime = 500;
 		e7.count = 20;
@@ -229,6 +232,8 @@ void Game::InitLevels() {
 		w4.events.push_back(e10);
 		waveQueue.push(w4);
 	}
+
+	
 	{
 		waveData wBoss;
 		wBoss.waveDelay = 2000;
@@ -248,7 +253,7 @@ void Game::InitLevels() {
 				Game::Effects.spawn(EffectType::SPELL_CUTIN, 0, 0, false);
 				Game::Effects.spawn(EffectType::SPELL_NAME, 0, 0, false);
 				Game::BG.setMode(BGMode::BOSS_SPELL);
-				Game::Barr.clearBarrage(); 
+				Game::Barr.clearBarrage();
 			}
 			else if (id == 2) { // 阶段击破
 				Game::Audio.play(L"damage");
@@ -256,75 +261,65 @@ void Game::InitLevels() {
 				Game::BG.setMode(BGMode::NORMAL);
 				EnemyManager::DropReq req = { x, y, 10 };
 				Game::E.dropQueue.push_back(req);
-				Game::Effects.clearSpellName();	
+				Game::Effects.clearSpellName();
 				Game::Barr.clearBarrage();
 			}
-		};
+			};
 		// phase1
 		{
-		BossPhase p1(
-			600,   // 血量
-			30000,  // 限时 30秒
-			Moves::bossEnter(80.0f), // 移动逻辑：飞到 Y=100 处悬停
-			false,
-			1,
-			2000
-		);
-		// phase1
-		/* 添加五星崩解任务
-		// 参数映射参考：
-		// interval: 5000 (每5秒一轮)
-		// speed: 2.0f (拉伸速度，控制线段变长的快慢)
-		// acc: 0.15f (抛射加速度，控制星星炸开的力度，0.1~0.2 之间效果最好)
-		// omega: 150.0f (大圆半径，5个星星离Boss多远)
-		// num: 
-		// r: 500 (悬停时间 500ms)
-		// dir: 1 (未使用)
-		// x0: 60 (星星半径，控制五角星大小)
-		// y0: 0 (未使用)
-		// burstCount: 100 (总共画100笔，越多越细腻)
-		// burstInterval: 10 (每笔间隔10ms，作画总耗时 1秒)
-		omega = 1.618 * */
-		p1.tasks.push_back(BarrageTask(
-			(int)bType::star_fall,      
-			5000,                      
-			1.0,                      
-			162.0f,                     
-			5,                         
-			1500,                        
-			1,                         
-			100,                         
-			0,                          
-			0.05f,                       
-			40,                        
-			15                         
-		));
-		sanae->addPhase(p1);
+			BossPhase p1(
+				600,   // 血量
+				30000,  // 限时 30秒
+				Moves::bossEnter(80.0f), // 移动逻辑：飞到 Y=100 处悬停
+				false,
+				1,
+				2000
+			);
+			// phase1
+			//omega = 1.618 * 
+			p1.tasks.push_back(BarrageTask(
+				(int)bType::star_fall,
+				5000,     // interval 发射间隔 (越小线条越密集)                     
+				0.3f,      // speed 拉伸速度，控制线段变长的快慢                
+				162.0f,   // omega 大圆半径，5个星星离Boss多远                  
+				5,		  // num 5个星星                 
+				1500,     // r 悬停时间 1500ms                   
+				1,        // dir (未使用)                 
+				100,      // x0 星星半径，控制五角星大小                   
+				0,        // y0 (未使用)                  
+				0.02f,     // acc 抛射加速度，控制星星炸开的力度，0.1~0.2 之间效果最好                   
+				40,       // burstCount 总共画100笔，越多越细腻                 
+				15,       // burstInterval 每笔间隔10ms，作画总耗时 1秒
+				(int)BulletStyle::BLUE_
+			));
+			sanae->addPhase(p1);
 		}
 
 		// phase2
 		{
-		BossPhase p2(
-			800,
-			45000,
-			Moves::Stay(),
-			true,
-			1000
-		);
-		int left = CentralX - 200;
-		int right = CentralX + 200;
-		p2.tasks.push_back(BarrageTask((int)bType::windmill_st, 100, 3.0f, 10, 1, 0, 1, left, 0));
-		p2.tasks.push_back(BarrageTask((int)bType::windmill_st, 100, 3.0f, 10, 1, 0, 0, right, 0));
-		p2.tasks.push_back(BarrageTask((int)bType::pincer_aim, 800, 4.0f, 0, 1,
-			150, 1, 0, 0, 0, 1));
-		sanae->addPhase(p2);
+			BossPhase p2(
+				600,
+				45000,
+				Moves::Stay(),
+				true,
+				1000
+			);
+			int left = CentralX - 200;
+			int right = CentralX + 200;
+			p2.tasks.push_back(BarrageTask((int)bType::windmill_st, 40, 3.0f, 20.3f, 1, 0, 1, left,
+				0, 0, 0, 0, (int)BulletStyle::RICE_BULE));
+			p2.tasks.push_back(BarrageTask((int)bType::windmill_st, 40, 3.0f, 20.3f, 1, 0, 0, right,
+				0, 0, 0, 0, (int)BulletStyle::RICE_BULE));
+			p2.tasks.push_back(BarrageTask((int)bType::pincer_aim, 800, 4.0f, 0, 1,
+				150, 1, 0, 0, 0, 1, 0, (int)BulletStyle::RED_));
+			sanae->addPhase(p2);
 		}
 
 		// phase3
 		BossPhase p3(
-			800,   
-			45000,  
-			Moves::StepLeftUp(3000, 200, 1, 1),
+			600,
+			45000,
+			Moves::StepLeftUp(3000, 200, 5, 5),
 			false,
 			0
 		);
@@ -333,71 +328,103 @@ void Game::InitLevels() {
 			100,             // interval 发射间隔 (越小线条越密集)
 			3.0f,           // speed 子弹飞行速度
 			8.0f,           // omega 旋转角速度 (每发旋转4度)
-			8,              // num 几条旋臂 (4叶风车)
+			8,              // num 几条旋臂 
 			200,              // 停顿
 			1,              // dir 初始方向 (1:顺时针)
 			0, 0,           // x0, y0
 			0,              // burstCount (未使用)
 			0,        // burstCount (unused)
-			3000      // burstInterval (switch time, 3000ms)
+			1000,      // burstInterval (switch time, 3000ms)
+			(int)BulletStyle::RICE_BULE
+		));
+		p3.tasks.push_back(BarrageTask(
+			(int)bType::windmill_switching,
+			100,             // interval 发射间隔 
+			3.0f,           // speed 子弹飞行速度
+			8.0f,           // omega 旋转角速度 
+			8,              // num 几条旋臂 
+			200,              // 停顿
+			-1,              // dir 初始方向 
+			0, 0,           // x0, y0
+			0,              // burstCount (未使用)
+			0,        // burstCount (unused)
+			1000,      // burstInterval 
+			(int)BulletStyle::RICE_RED
 		));
 		sanae->addPhase(p3);
 		// phase4
 		{
-		BossPhase p4(
-			800,   
-			45000,  
-			Moves::MoveTo(CentralX, CentralY, 80.0f), 
-			true  
-		);
-		
-		p4.tasks.push_back(BarrageTask((int)bType::firework, 500, 3.0f, 0, 24));
-		p4.tasks.push_back(BarrageTask((int)bType::pincer_aim, 1500, 4.0f, 0, 2, 
-							150, 1, 0, 0, 0.5f, 3, 80));
-		sanae->addPhase(p4);
+			BossPhase p4(
+				600,
+				45000,
+				Moves::MoveTo(CentralX, CentralY, 80.0f),
+				true
+			);
+
+			p4.tasks.push_back(BarrageTask((int)bType::firework, 500, 3.0f, 0, 24, 0, 0, 0, 0, 0, 0, 0, (int)BulletStyle::RICE_BULE));
+			p4.tasks.push_back(BarrageTask((int)bType::pincer_aim, 1500, 4.0f, 0, 2,
+				150, 1, 0, 0, 0.5f, 5, 80));
+			sanae->addPhase(p4);
 		}
 
 		// phase5
 		{
-		BossPhase p5(
-			300,
-			60000,
-			Moves::Stay(),
-			false,
-			1000
-		);
-		p5.tasks.push_back(BarrageTask(
-			(int)bType::star_fall,      
-			5000,                      
-			0.5,                       
-			370.0f,                     
-			12,                         
-			1500,                        
-			1,                          
-			100,                         
-			0,                          
-			0.05f,                       
-			40,                        
-			15                         
-		));
-		sanae->addPhase(p5);
+			BossPhase p5(
+				600,
+				60000,
+				Moves::Stay(),
+				false,
+				1000
+			);
+			p5.tasks.push_back(BarrageTask(
+				(int)bType::star_fall,
+				5000,
+				0.5,
+				370.0f,
+				12,
+				1500,
+				1,
+				100,
+				0,
+				0.02f,
+				40,
+				15,
+				(int)BulletStyle::RED_
+			));
+			p5.tasks.push_back(BarrageTask(
+				(int)bType::star_fall,
+				5000,     // interval 发射间隔 (越小线条越密集)                     
+				0.3f,      // speed 拉伸速度，控制线段变长的快慢                
+				162.0f,   // omega 大圆半径，5个星星离Boss多远                  
+				5,		  // num 5个星星                 
+				1500,     // r 悬停时间 1500ms                   
+				1,        // dir (未使用)                 
+				100,      // x0 星星半径，控制五角星大小                   
+				0,        // y0 (未使用)                  
+				0.04f,     // acc 抛射加速度，控制星星炸开的力度，0.1~0.2 之间效果最好                   
+				40,       // burstCount 总共画100笔，越多越细腻                 
+				15,       // burstInterval 每笔间隔10ms，作画总耗时 1秒
+				(int)BulletStyle::BLUE_
+			));
+			sanae->addPhase(p5);
 		}
-		
+
 		// phase6
 		{
-		BossPhase p6(
-			600,
-			45000,
-			Moves::Stay(),
-			true,
-			1000
-		);
-		p6.tasks.push_back(BarrageTask((int)bType::firework, 300, 3.0f, 0, 15));
-		p6.tasks.push_back(BarrageTask((int)bType::windmill_st, 100, 3.0f, 10, 12));
-		sanae->addPhase(p6);
+			BossPhase p6(
+				800,
+				45000,
+				Moves::MoveTo(CentralX, CentralY, 80.0f),
+				true,
+				1000
+			);
+			//p6.tasks.push_back(BarrageTask((int)bType::firework, 800, 1.5f, 0, 15, 0, 0, 0, 0, 0, 0, 0, (int)BulletStyle::BLUE_BIG));
+			p6.tasks.push_back(BarrageTask((int)bType::windmill, 350, 1.5f, 8, 6, 0, 0, 0, 0, 0, 1, 0, (int)BulletStyle::BLUE_BIG));
+			p6.tasks.push_back(BarrageTask((int)bType::windmill_st, 100, 3.0f, 15, 12));
+			sanae->addPhase(p6);
 		}
-		boss.bossInstance = sanae;      
-		wBoss.events.push_back(boss);   
+		boss.bossInstance = sanae;
+		wBoss.events.push_back(boss);
 		waveQueue.push(wBoss);
 	}
 }
@@ -441,6 +468,8 @@ void Game::Barrages() {
 		// 执行任务
 		for (auto& task : en->GetTasks()) {
 
+			BulletStyle style = static_cast<BulletStyle>(task.style);
+
 			if (task.type == (int)bType::windmill_switching) {
 				if (task.lastBurstTime == 0) {
 					task.lastBurstTime = now;
@@ -448,13 +477,13 @@ void Game::Barrages() {
 				}
 				if (task.currentBurst == 0) {
 					// 这里的 interval 决定了发射密度
-					if (now - task.lastTime >= task.interval) {
+					if (now - task.lastTime >= (DWORD)task.interval) {
 						task.lastTime = now; 
 						task.currentAngle += task.omega * task.dir;
-						Barr.directionalMill(*en, task.speed, task.currentAngle, task.num, centerX, centerY);
+						Barr.directionalMill(*en, task.speed, task.currentAngle, task.num, centerX, centerY, task.dir, style);
 					}
 
-					if (now - task.lastBurstTime >= task.burstInterval) {
+					if (now - task.lastBurstTime >= (DWORD)task.burstInterval) {
 						task.currentBurst = 1;  
 						task.lastBurstTime = now;
 					}
@@ -472,14 +501,14 @@ void Game::Barrages() {
 			bool shouldFire = false;
 
 			if (task.currentBurst == 0) {
-				if (now - task.lastTime >= task.interval) {
+				if (now - task.lastTime >= (DWORD)task.interval) {
 					shouldFire = true;
 					task.lastTime = now;
 				}
 			}
 			// 连发
 			else if (task.currentBurst > 0 && task.currentBurst < task.burstCount) {
-				if (now - task.lastBurstTime >= task.burstInterval) {
+				if (now - task.lastBurstTime >= (DWORD)task.burstInterval) {
 					shouldFire = true;
 				}
 			}
@@ -493,19 +522,35 @@ void Game::Barrages() {
 			int y = (task.y0 == 0) ? centerY : task.y0;
 
 			switch ((bType)task.type) {
-			case bType::down_st: Barr.Normal(*en, task.speed); break;
-			case bType::windmill_st: Barr.straightMill(*en, task.speed, (int)task.omega, task.num, x, y, 1); break;
-			case bType::firework: Barr.fireWork(*en, currentSpeed, task.num, x, y); break;
-			case bType::circle_mill: Barr.circleMill(*en, task.speed, task.r, task.num, x, y); break;
-			case bType::wheel: Barr.wheel(*en, task.speed, task.omega, task.num, x, y); break;
-			case bType::pincer_aim: Barr.pincerAim(*en, Hero.x, Hero.y, currentSpeed, task.r, task.num, x, y); break;
-			case bType::random_rain: Barr.randomRain(currentSpeed); break;
+			case bType::down_st: 
+				Barr.Normal(*en, task.speed, style);
+				break;
+			case bType::windmill_st: {
+				float extraShift = 1.2f; // 每一发都额外多转 1.2 度
+				task.currentAngle += (task.omega + extraShift);
+				Barr.straightMill(*en, task.speed, (int)task.currentAngle, task.num, x, y, 1, style);
+				break;
+			}
+			case bType::firework: 
+				Barr.fireWork(*en, currentSpeed, task.num, x, y, style);
+				break;
+			case bType::circle_mill: 
+				Barr.circleMill(*en, task.speed, task.r, task.num, x, y, style);
+				break;
+			case bType::windmill:
+				Barr.straightMill2(*en, task.speed, (int)task.omega, task.num, x, y, 1, style);
+				break;
+			case bType::pincer_aim:
+				Barr.pincerAim(*en, Hero.x, Hero.y, currentSpeed, task.r, task.num, x, y, style);
+				break;
+			case bType::random_rain: 
+				Barr.randomRain(currentSpeed, style);
+				break;
 			case bType::star_fall: {
 				DWORD releaseTime = task.lastTime + task.r;
 				if (releaseTime < now) releaseTime = now;
 				Barr.fiveStar(*en, task.currentBurst, task.burstCount, task.omega,
-					(float)task.x0, task.speed, task.acc, releaseTime, task.num, centerX, centerY
-				);
+					(float)task.x0, task.speed, task.acc, releaseTime, task.num, centerX, centerY, style);
 				break;
 			}
 			default: break;
@@ -689,7 +734,10 @@ void Game::CheckCollision() {
 			// 弹幕判定半径 
 			float barrCx = b->x;
 			float barrCy = b->y;
-			float barrR = 6.0f; 
+			float bR = b->getWidth() / 2; 
+			float barrR = 0;
+			if (b->getStyle() == BulletStyle::RICE_BULE || b->getStyle() == BulletStyle::RICE_RED) barrR = bR;
+			else barrR = bR - 2;
 
 			if (checkCircleCollide(Hero.x, Hero.y, heroR, barrCx, barrCy, barrR)) {
 				Hero.hit();
@@ -745,7 +793,7 @@ void Game::CheckCollision() {
 			float dist = enx * enx + eny * eny;
 			if (dist - (spellRadius + 100) * (spellRadius + 100) < 100) {
 				// 造成伤害
-				enemy->hp -= 0.05f;
+				enemy->hp -= 1;
 				if (enemy->type == eType::boss) {
 					if (enemy->isAlive()) {
 						continue;
@@ -862,8 +910,8 @@ void Game::UpdateSpellCard() {
 		float currentB_Angle = spellAngle + i * (3.14159f / 2.0f);
 
 		// x = 圆心x + 半径 * cos(角度)
-		b->x = heroCx + spellRadius * cos(currentB_Angle) - Barrage::getDarkGreenWidth() / 2;
-		b->y = heroCy + spellRadius * sin(currentB_Angle) - Barrage::getDarkGreenHeight() / 2;
+		b->x = heroCx + spellRadius * cos(currentB_Angle) - b->getWidth() / 2;
+		b->y = heroCy + spellRadius * sin(currentB_Angle) - b->getHeight() / 2;
 		b->draw();
 
 		// 检查是否还在屏幕内 (只要有一个在屏幕内，符卡就不算结束)
@@ -899,8 +947,55 @@ void Game::DrawDebug() {
 		setlinecolor(GREEN);
 		circle((int)e->x, (int)e->y, (int)(e->type == eType::boss ? 35 : 12));
 	}
+}
+
+void Game::adjustWindow() {
+	HWND hwnd = GetHWnd();
+	ImmAssociateContext(hwnd, NULL);
+	int scrW = GetSystemMetrics(SM_CXSCREEN);
+	int scrH = GetSystemMetrics(SM_CYSCREEN);
+	LONG style = GetWindowLong(hwnd, GWL_STYLE);
+	int w = screenWidth;
+	int h = screenHeight;
+	int x = (scrW - w) / 2;
+	int y = (scrH - h) / 2;
+	MoveWindow(hwnd, x, y, w, h, TRUE);
+}
+
+void Game::drawUI() {
+	// 1. 设置文字样式和颜色
+	settextstyle(40, 0, L"微软雅黑", 0, 0, FW_BOLD, false, false, false);
+	settextcolor(WHITE);
+	setbkmode(TRANSPARENT);
+
+	// 2. 定义起始坐标 (主舞台右边缘外侧)
+	int uiX = LeftEdge + WIDTH + 30;
+	int uiY = 100;
+
+	// --- 绘制残机 (Player) ---
+	settextcolor(RED);
+	outtextxy(uiX, uiY, L"Player");
+
+	// 使用循环画出星形，或者直接显示数字
+	// 这里演示显示数字和符号组合
+	wchar_t lifeStr[16];
+	swprintf_s(lifeStr, L"★ × %d", Hero.getLives()); 
+	settextcolor(RED); // 残机通常用粉色/红色
+	outtextxy(uiX + 10, uiY + 40, lifeStr);
+
+	// --- 绘制符卡 (Spell / Bomb) ---
+	uiY += 100;
+	settextcolor(YELLOW);
+	outtextxy(uiX, uiY, L"Spell");
+
+	wchar_t bombStr[16];
+	swprintf_s(bombStr, L"★ × %d", Hero.getBombs()); 
+	settextcolor(YELLOW);
+	outtextxy(uiX + 10, uiY + 40, bombStr);
 
 }
+
+
 
 
 

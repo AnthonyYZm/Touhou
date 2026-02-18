@@ -140,7 +140,7 @@ void EnemyManager::drawAll() {
 			continue;
 		}
 		if (e->type == eType::normal) {
-			e->sx = e->row * 32.5f;
+			e->sx = (int)(e->row * 32.5f);
 			e->sy = 322;
 			e->frame = 4;
 		}

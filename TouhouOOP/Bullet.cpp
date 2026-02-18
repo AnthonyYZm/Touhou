@@ -1,13 +1,15 @@
 #include "Bullet.h"
 #include "Enemy.h"
 
-int const Bullet::bulletWidth = 12;
-int const Bullet::bulletHeight = 14;
+int const Bullet::bulletWidth = 20;
+int const Bullet::bulletHeight = 46;
+int const Bullet::sideBulletWidth = 10;
+int const Bullet::sideBulletHeight = 15;
 IMAGE Bullet::bullet1;
 
 Bullet::Bullet(float _x, float _y) : Role(_x, _y) {
     if (bullet1.getwidth() == 0) {
-        loadimage(&bullet1, L"resource/bullet/bullet1.png");
+        loadimage(&bullet1, L"resource/bullet/reimu_fire.png");
     }
 	t1 = 0;
 	t2 = 0;
@@ -16,6 +18,8 @@ Bullet::Bullet(float _x, float _y) : Role(_x, _y) {
 	fire = false;	
     vx = 0;
 	vy = -speed;
+    hp = 1;
+	bulletType = 0; 
 }
 
 Bullet::~Bullet() {
@@ -26,8 +30,15 @@ Bullet::~Bullet() {
 }
 
 void Bullet::draw() {
-    putimagePNG((int)(x - bulletWidth * 0.75), (int)(y - bulletHeight * 0.75),
-        bulletWidth, bulletHeight, &bullet1, 34, 133, (int)(bulletWidth * 1.5), (int)(bulletHeight * 1.5));
+    if (this->bulletType == 0) {
+        putimagePNG((int)(x - bulletWidth * 0.75), (int)(y - bulletHeight * 0.75),
+            bulletWidth, bulletHeight, &bullet1, 53, 96, (int)(bulletWidth * 1.5), (int)(bulletHeight * 1.5));
+    }
+    else if (this->bulletType == 1) {
+         putimagePNG((int)(x - sideBulletWidth * 0.75), (int)(y - sideBulletHeight * 0.75),
+			sideBulletWidth, sideBulletHeight, &bullet1, 2, 241, (int)(sideBulletWidth * 1.5), (int)(sideBulletHeight * 1.5));
+    }
+   
 }
 
 void Bullet::move() {
@@ -105,7 +116,9 @@ void Bullet::createBullet(Hero* hero, int type, const std::vector<Enemy*>& enemi
                     float angleR = atan2(target->y - rightB->y, target->x - rightB->x);
 
                     leftB->setVelocity(speed * cos(angleL), speed * sin(angleL));
+                    leftB->bulletType = 1;
                     rightB->setVelocity(speed * cos(angleR), speed * sin(angleR));
+					rightB->bulletType = 1;
                 }
                 else {
                     // 无目标模式 (斜向发射)
@@ -115,7 +128,9 @@ void Bullet::createBullet(Hero* hero, int type, const std::vector<Enemy*>& enemi
                     float angleR = baseAngle + offsetAngle;
 
                     leftB->setVelocity(speed * cos(angleL), speed * sin(angleL));
+                    leftB->bulletType = 1;
                     rightB->setVelocity(speed * cos(angleR), speed * sin(angleR));
+                    rightB->bulletType = 1;
                 }
 
                 leftB->alive = true;

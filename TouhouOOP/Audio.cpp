@@ -21,35 +21,73 @@ void AudioManager::init() {
 	sounds[L"pickup"] = L"resource/sound/se_item00.wav"; 
 	sounds[L"breakBoss"] = L"resource/sound/break_boss.wav"; 
 
+	pooledSounds = { L"barrage", L"break", L"clear", L"hit", L"pickup" };
+
 	sounds[L"bgm_stage1"] = L"resource/bgm/【東方風神録】～ 神々が恋した幻想郷 ～　.mp3";
-	sounds[L"bgm_boss"] = L"resource/bgm/【東方風神録】～ 信仰は儚き人間の為に ～　.mp3";
+	sounds[L"bgm_sanae"] = L"resource/bgm/【東方風神録】～ 信仰は儚き人間の為に ～　.mp3";
 
 	// 预加载 
-	for (auto const& [alias, path] : sounds) {
-		std::wstring cmd = L"open \"" + path + L"\" alias " + alias;
-		mciSendString(cmd.c_str(), NULL, 0, NULL);
+	for (auto const& [name, path] : sounds) {
+		// 检查这个音效是否属于高频音效
+		bool isPooled = std::find(pooledSounds.begin(), pooledSounds.end(), name) != pooledSounds.end();
+
+		if (isPooled) {
+			// [核心] 如果是高频音效，加载 POOL_SIZE 次
+			// 例如：barrage_0, barrage_1, ... barrage_14
+			for (int i = 0; i < POOL_SIZE; ++i) {
+				std::wstring alias = name + L"_" + std::to_wstring(i);
+				std::wstring cmd = L"open \"" + path + L"\" alias " + alias;
+				mciSendString(cmd.c_str(), NULL, 0, NULL);
+			}
+			poolIndex[name] = 0; // 初始化索引
+			lastPlayTime[name] = 0;
+		}
+		else {
+			// 普通音效 (BGM 或低频音效) 只加载一次
+			std::wstring cmd = L"open \"" + path + L"\" alias " + name;
+			mciSendString(cmd.c_str(), NULL, 0, NULL);
+		}
 	}
+
 	loaded = true;
 	currentBGM = L"";
 }
 
-void AudioManager::playFast(const std::wstring& path) {
-	PlaySound(path.c_str(), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
-}
 
 void AudioManager::play(const std::wstring& name) {
-	// PlaySound
-	if ( name == L"break" || name == L"clear") {
-		if (sounds.find(name) != sounds.end()) {
-			playFast(sounds[name]);
-		}
-		return;
-	}     
-
-	// MCI
+	// 安全检查
 	if (sounds.find(name) == sounds.end()) return;
-	std::wstring cmd = L"play " + name + L" from 0";
-	mciSendString(cmd.c_str(), NULL, 0, NULL);
+	// 音效限流 (Sound Throttling)
+	DWORD now = GetTickCount();
+
+	// 针对高频音效进行限流
+	// 如果是 "barrage" (发射) 或 "break" (爆炸)，限制播放频率
+	if (name == L"barrage" || name == L"break" || name == L"hit") {
+		// 设定最小间隔为 40ms (约每秒 25 次，足够密集了)
+		// 如果你想更密集，可以改为 20ms；想更流畅，改为 50ms
+		const int MIN_INTERVAL = 40;
+
+		if (now - lastPlayTime[name] < MIN_INTERVAL) {
+			return; // 还在冷却中，跳过不播放，直接返回！
+		}
+		// 更新播放时间
+		lastPlayTime[name] = now;
+	}
+
+	// 下面是原有的播放逻辑
+	bool isPooled = std::find(pooledSounds.begin(), pooledSounds.end(), name) != pooledSounds.end();
+
+	if (isPooled) {
+		int idx = poolIndex[name];
+		std::wstring alias = name + L"_" + std::to_wstring(idx);
+		std::wstring cmd = L"play " + alias + L" from 0";
+		mciSendString(cmd.c_str(), NULL, 0, NULL);
+		poolIndex[name] = (idx + 1) % POOL_SIZE;
+	}
+	else {
+		std::wstring cmd = L"play " + name + L" from 0";
+		mciSendString(cmd.c_str(), NULL, 0, NULL);
+	}
 }
 
 void AudioManager::playBGM(const std::wstring& name) {

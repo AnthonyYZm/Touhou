@@ -20,8 +20,8 @@ Hero::Hero(float _x, float _y) : Role(_x, _y, 1) {
 	score = 0;
 	invincible = false;
 	invincibleEnd = 0;
-	bombCount = 100;
-	maxBomb = 100;
+	bombCount = 5;
+	maxBomb = 5;
 }
 
 /*Draw hero

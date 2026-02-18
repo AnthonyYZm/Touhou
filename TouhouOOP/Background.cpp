@@ -10,7 +10,8 @@ void BackgroundManager::init() {
 	loadimage(&bgNormal, L"resource/background/game.png", WIDTH, HEIGHT);
 	loadimage(&bgSpellBase, L"resource/background/cdbg05a.png", WIDTH, HEIGHT);
 	loadimage(&bgSpellLayer, L"resource/background/cdbg05b.png", WIDTH, WIDTH);
-	loadimage(&tips, L"resource/background/tips.png");
+	loadimage(&bg, L"resource/background/bg.png", screenWidth, screenHeight);
+
 }
 
 void BackgroundManager::setMode(BGMode mode) {
@@ -42,7 +43,7 @@ void TileDraw(IMAGE* img, float scrollY, int alpha = 255) {
 }
 
 void BackgroundManager::draw() {
-	putimage(LeftEdge + WIDTH + 30, TopEdge, &tips);
+	putimage(0, 0, &bg);
 	HRGN rgn = CreateRectRgn(LeftEdge, TopEdge, LeftEdge + WIDTH, TopEdge + HEIGHT);
 	setcliprgn(rgn);
 	if (currentMode == BGMode::NORMAL) {

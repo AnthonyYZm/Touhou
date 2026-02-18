@@ -62,23 +62,38 @@ namespace Moves {
             e->y = e->y;
             };
 	}
-
+   
+	
     static MoveStrategy StepLeftUp(int interval, int duration, float speedX, float speedY) {
         return [=](Enemy* e, int timer) {
             int t = timer % interval;
-            if (t < duration && e->y > TopEdge + 50) {
-                if (e->x > 20) e->x -= speedX;
-                if (e->y > 20) e->y -= speedY;
-            }
-            else {
-                e->y = e->y;
-                e->x = e->x;
+            int moveCnt = timer / interval;
+            if (t < duration) {
+                // 根据周期数对 3 取模，决定当前周期的动作方向
+                int actionType = moveCnt % 3;
+
+                switch (actionType) {
+                case 0: // 第一个周期：向左上移动
+                    e->x -= speedX;
+                    e->y -= speedY;
+                    break;
+
+                case 1: // 第二个周期：向下移动
+                    e->y += speedY * 2; // 这里可以根据需要调整倍数
+                    break;
+
+                case 2: // 第三个周期：向右上移动
+                    e->x += speedX;
+                    e->y -= speedY;
+                    break;
+                }
             }
             };
     }
 
     static MoveStrategy MoveTo(float targetX, float targetY, float speed) {
         return [=](Enemy* e, int timer) {
+
             float dx = targetX - e->x;
             float dy = targetY - e->y;
             float dist = sqrt(dx * dx + dy * dy);

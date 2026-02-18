@@ -3,7 +3,6 @@
 #include "Role.h"
 #include "Hero.h"	
 #include "Bullet.h"
-#include "Screen.h"
 #include "Enemy.h"
 #include "Barrage.h"
 #include "EnemyManager.h"
@@ -12,13 +11,14 @@
 #include "Audio.h"     
 #include "Effect.h"    
 #include "Background.h"
+#include <imm.h> 
+#pragma comment(lib, "imm32.lib")
 
 class Game {
 
 	static int bulletLevel;
 	bool enemyFire;
 	bool wait;
-	Screen Scr;
 	EnemyManager E;
 	Hero Hero;
 	Barrage Barr;	
@@ -27,16 +27,15 @@ class Game {
 	std::queue<waveData> waveQueue;
 	std::vector<SpawnEvent> currentWave;
 	waveData nextWave;
-
 	std::vector<Item*> items;
-
 	std::vector<Barrage*> spellBarrages; 
 	bool isSpellActive;                  
 	float spellRadius;
 	float spellAngle;
 
 	DWORD waitStart;
-	
+	bool isFullScreen = false;	
+	std::wstring currentBGM;
 
 public:
 
@@ -61,6 +60,8 @@ public:
 	void UpdateSpellCard(); 
 	void ClearSpellBarrages(); 
 	void handleBGM();
+	void adjustWindow();
+	void drawUI();
 	
 	// Åö×²¼ì²â
 	bool checkCircleCollide(float x1, float y1, float r1, float x2, float y2, float r2) {

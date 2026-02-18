@@ -5,7 +5,8 @@ enum class EffectType {
 	EXPLOSION,      // 敌人爆炸 
 	CLEAR_SMALL,    // 清弹特效 
 	SPELL_CUTIN,    // 符卡立绘 
-	SPELL_NAME
+	SPELL_NAME,
+	CREATE_BARRAGE
 };
 
 
@@ -26,6 +27,7 @@ struct EffectInstance {
 	bool isPersistent; 
 	float scale;       
 };
+
 class EffectManager {
 private:
 	std::vector<EffectInstance> effects;
@@ -34,7 +36,11 @@ private:
 	IMAGE imgReimuSpell;  // 自机符卡
 	IMAGE imgSanaeSpell;  // 敌人符卡
 	IMAGE imgSpellName;
+	IMAGE imgBarrage;      // 弹幕生成特效
+	IMAGE imgRibbon;
 	bool loaded;
+
+	void drawSpellRibbons(long elapsed);
 
 public:
 	EffectManager();

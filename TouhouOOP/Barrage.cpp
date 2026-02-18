@@ -1,34 +1,42 @@
 #include "Barrage.h"
+#include "Game.h"
 
 int const Barrage::darkGreenWidth = 24;
 int const Barrage::darkGreenHeight = 24;
+int const Barrage::riceWidth = 9;
+int const Barrage::riceHeight = 16;
 int Barrage::wheelGroup = 1;
 int Barrage::globalGroupID = 0;
-IMAGE Barrage::barr1;
+IMAGE Barrage::imgBlue;
+IMAGE Barrage::imgGreen;
+IMAGE Barrage::imgRiceBlue;
+IMAGE Barrage::imgRiceRed;	
+IMAGE Barrage::imgBlueBig;
 IMAGE Barrage::mxtsSpell;
+IMAGE Barrage::imgRed;
 
-Barrage::Barrage(float _x, float _y) : Role(_x, _y) {
-	if (barr1.getwidth() == 0) {
-		loadimage(&barr1, L"resource/barrage/mid_bullet_darkGreen.png");
-	}
-	if (mxtsSpell.getwidth() == 0) {
-		loadimage(&mxtsSpell, L"resource/barrage/etama_big.png");
-	}
-	t1 = 0;
-	t2 = 0;
-	vx = 0.0f;
-	vy = 0.0f;
+Barrage::Barrage(float _x, float _y, BulletStyle _style) : Role(_x, _y) {
+	this->style = _style;
+	if (imgGreen.getwidth() == 0) loadimage(&imgGreen, L"resource/barrage/mid_bullet_darkGreen.png");
+	if (imgBlue.getwidth() == 0) loadimage(&imgBlue, L"resource/barrage/blue_bullet.png");
+	if (imgRiceBlue.getwidth() == 0) loadimage(&imgRiceBlue, L"resource/barrage/rice_bullet.png");
+	if (imgRiceRed.getwidth() == 0) loadimage(&imgRiceRed, L"resource/barrage/rice_bullet.png");
+	if (mxtsSpell.getwidth() == 0) loadimage(&mxtsSpell, L"resource/barrage/etama_big.png");
+	if (imgRed.getwidth() == 0) loadimage(&imgRed, L"resource/barrage/red_bullet.png");
+	t1 = 0; t2 = 0;
+	vx = 0.0f; vy = 0.0f;
 	speed = 4.0f;
 	moveType = 0;	
 	radius = 0;
-	centerX = 0;
-	centerY = 0;
+	centerX = 0; centerY = 0;
 	alive = false;
 	currentAngle = 90.0f;
 	lock = false;
 	outBound = false;
 	groupID = -1;
 	isFriendly = false;
+	omega = 0.0f; radian = 0.0f; rSpeed = 0.0f;
+	this->isRotated = false;
 }
 
 Barrage::~Barrage() {
@@ -49,18 +57,123 @@ void Barrage::reset() {
 	currentAngle = 90.0f;
 }
 
+BulletRect Barrage::getRect(BulletStyle s) {
+	switch (s) {
+	case BulletStyle::GREEN_: return { 0, 0, darkGreenWidth, darkGreenHeight };
+	case BulletStyle::BLUE_: return { 0, 0, darkGreenWidth, darkGreenHeight };
+	case BulletStyle::RICE_BULE: return { 100, 0, riceWidth, riceHeight };
+	case BulletStyle::RICE_RED: return { 36, 0, riceWidth, riceHeight };
+	case BulletStyle::RED_: return { 0, 0, darkGreenWidth, darkGreenHeight };
+	case BulletStyle::BLUE_BIG: return { 0, 0, (int)(darkGreenWidth * 1.5), (int)(darkGreenWidth * 1.5) };
+	}
+}
+
+int Barrage::getWidth() const { return getRect(this->style).w; }
+
+int Barrage::getHeight() const { return getRect(this->style).h; }
+
+void Barrage::calRotation() {
+	// 只对米型弹幕旋转
+	bool isRice = (style == BulletStyle::RICE_BULE || style == BulletStyle::RICE_RED);
+	if (!isRice) {
+		isRotated = false;
+		return;
+	}
+
+	BulletRect r = getRect(this->style);
+	IMAGE* imgPtr = nullptr;
+	switch (style) {
+	case BulletStyle::RICE_BULE: imgPtr = &imgRiceBlue; break;
+	case BulletStyle::RICE_RED:  imgPtr = &imgRiceRed;  break;
+	}
+
+	if (!imgPtr || imgPtr->getwidth() == 0) return;
+
+	// 计算旋转角度
+	float angle = atan2(vy, vx);
+	float theta = PI / 2.0f - angle;
+
+	// 1. 创建正方形画布，边长=max(w, h)
+	int side = (std::max)(r.w, r.h);
+	IMAGE squareImg(side, side);
+	SetWorkingImage(&squareImg);
+	// 填充透明
+	DWORD* buf = GetImageBuffer(&squareImg);
+	memset(buf, 0, side * side * sizeof(DWORD));
+	// 2. 将原子弹贴图居中画到正方形画布
+	int offsetX = (side - r.w) / 2;
+	int offsetY = (side - r.h) / 2;
+	SetWorkingImage(imgPtr);
+	IMAGE tempImg;
+	getimage(&tempImg, r.x, r.y, r.w, r.h);
+	SetWorkingImage(&squareImg);
+	putimage(offsetX, offsetY, &tempImg, SRCPAINT);
+	SetWorkingImage(NULL);
+
+	// 3. 旋转
+	rotateimage(&cacheImg, &squareImg, theta);
+
+	// 4. 修复透明度
+	DWORD* pMem = GetImageBuffer(&cacheImg);
+	int pixelCount = cacheImg.getwidth() * cacheImg.getheight();
+	for (int i = 0; i < pixelCount; i++) {
+		if ((pMem[i] & 0x00FFFFFF) != 0) {
+			pMem[i] |= 0xFF000000;
+		}
+	}
+
+	this->isRotated = true;
+}
+
 void Barrage::draw() {
 	if (isFriendly) {
 		// 大玉
 		int drawW = 200;
 		int drawH = 200;
 		putimagePNG((int)(x - drawW / 2), (int)(y - drawH / 2), 256, 256, &mxtsSpell, 0, 0, drawW, drawH);
+		return;
+	}
+	if (isRotated) {
+		int rw = cacheImg.getwidth();
+		int rh = cacheImg.getheight();
+		putimagePNG((int)(x - rw / 2), (int)(y - rh / 2), rw, rh, &cacheImg, 0, 0, rw, rh);
 	}
 	else {
-		// 中弹 
-		int halfW = darkGreenWidth / 2;
-		int halfH = darkGreenHeight / 2;
-		putimagePNG((int)(x - halfW), (int)(y - halfH), darkGreenWidth, darkGreenHeight, &barr1, 0, 0, darkGreenWidth, darkGreenHeight);
+		IMAGE* imgPtr = nullptr;
+		BulletRect r = getRect(this->style);
+		int dstX = r.w;
+		int dstY = r.h;
+		switch (style) {
+		case BulletStyle::GREEN_:
+			imgPtr = &imgGreen;
+			break;
+		case BulletStyle::RICE_BULE:
+			imgPtr = &imgRiceBlue;
+			dstX = (int)(riceWidth * 1.2); dstY = (int)(riceHeight * 1.2);
+			break;
+		case BulletStyle::RICE_RED:
+			imgPtr = &imgRiceRed;
+			dstX = (int)(riceWidth * 1.2); dstY = (int)(riceHeight * 1.2);
+			break;
+		case BulletStyle::BLUE_BIG:
+			imgPtr = &imgBlue;
+			r.w = darkGreenWidth;
+			r.h = darkGreenHeight;
+			dstX = (int)(darkGreenWidth * 1.5f);
+			dstY = (int)(darkGreenHeight * 1.5f);
+			break;
+		case BulletStyle::BLUE_:
+			imgPtr = &imgBlue;
+			break;
+		case BulletStyle::RED_:
+			imgPtr = &imgRed;
+			break;
+		default:
+			break;
+		}
+		if (imgPtr && imgPtr->getwidth() > 0) {
+			putimagePNG((int)(x - dstX / 2), (int)(y - dstY / 2), r.w, r.h, imgPtr, r.x, r.y, dstX, dstY);
+		}
 	}
 }
 
@@ -101,67 +214,97 @@ void Barrage::collision() {
 }
 
 
-void Barrage::Normal(Enemy& e, float speed) {
+void Barrage::Normal(Enemy& e, float speed, BulletStyle s) {
 	if (!e.isAlive() || !e.fire) return;
-	Barrage* newBarrage = new Barrage(e.x, e.y);
+	Barrage* newBarrage = new Barrage(e.x, e.y, s);
 	newBarrage->vx = 0;
 	newBarrage->vy = speed;
 	newBarrage->alive = true;
 	barrList.push_back(newBarrage);
+	Game::Effects.spawn(EffectType::CREATE_BARRAGE, e.x, e.y);
 }
 //straight
 
-void Barrage::straightMill(Enemy& e, float speed, int omega, int num, int x0, int y0, int dir) {
+void Barrage::straightMill(Enemy& e, float speed, int omega, int num, int x0, int y0, int dir, BulletStyle s) {
 	if (e.alive && e.fire) {
 		static float spin = 0;
 		for (int i = 0; i < num; ++i) {
-			Barrage* newBarrage = new Barrage(x0, y0);
+			Barrage* newBarrage = new Barrage((float)x0, (float)y0, s);
 			float angle = i * (360.0f / num) + spin;
 			float rad = angle * PI / 180.0f;
 			if (dir == 0) rad = -rad;
 			newBarrage->vx = speed * cos(rad);
 			newBarrage->vy = speed * sin(rad);
+			newBarrage->calRotation();
 			newBarrage->alive = true;
 			barrList.push_back(newBarrage);
+			Game::Effects.spawn(EffectType::CREATE_BARRAGE, x0, y0);
+			Game::Audio.play(L"barrage");
 		}
 		spin += omega;
 	}
 }
 
-void Barrage::directionalMill(Enemy& e, float speed, float baseAngle, int num, int x0, int y0) {
-	if (e.isAlive() && e.fire) {
+void Barrage::straightMill2(Enemy& e, float speed, int omega, int num, int x0, int y0, int dir, BulletStyle s) {
+	if (e.alive && e.fire) {
+		static float spin = 0;
 		for (int i = 0; i < num; ++i) {
-			Barrage* newBarrage = new Barrage(x0, y0);
-			float angle = i * (360.0f / num) + baseAngle;
+			Barrage* newBarrage = new Barrage((float)x0, (float)y0, s);
+			float angle = i * (360.0f / num) + spin;
 			float rad = angle * PI / 180.0f;
+			if (dir == 0) rad = -rad;
 			newBarrage->vx = speed * cos(rad);
 			newBarrage->vy = speed * sin(rad);
+			newBarrage->calRotation();
+			newBarrage->alive = true;
+			barrList.push_back(newBarrage);
+			Game::Effects.spawn(EffectType::CREATE_BARRAGE, x0, y0);
+			Game::Audio.play(L"barrage");
+		}
+		spin += omega;
+	}
+}
+
+void Barrage::directionalMill(Enemy& e, float speed, float baseAngle, int num, int x0, int y0, int dir, BulletStyle s) {
+	if (e.isAlive() && e.fire) {
+		for (int i = 0; i < num; ++i) {
+			Barrage* newBarrage = new Barrage((float)x0, (float)y0, s);
+			float angle = i * (360.0f / num) + baseAngle;
+			float rad = angle * PI / 180.0f;	
+			newBarrage->vx = speed * cos(rad);
+			newBarrage->vy = speed * sin(rad);
+			newBarrage->calRotation();
 			newBarrage->alive = true;
 			newBarrage->moveType = 0; 
 			barrList.push_back(newBarrage);
+			Game::Effects.spawn(EffectType::CREATE_BARRAGE, x0, y0);
+			Game::Audio.play(L"barrage");
 		}
 	}
 }
 
-void Barrage::fireWork(Enemy& e, float speed, int num, int x0, int y0) {
+void Barrage::fireWork(Enemy& e, float speed, int num, int x0, int y0, BulletStyle s) {
 	if (e.alive && e.fire) {
 		for (int i = 0; i < num; ++i) {
-			Barrage* newBarrage = new Barrage(x0, y0);
+			Barrage* newBarrage = new Barrage((float)x0, (float)y0, s);
 			float angle = i * (360.0f / num);
 			float rad = angle * PI / 180.0f;
 			newBarrage->vx = speed * cos(rad);
 			newBarrage->vy = speed * sin(rad);
+			newBarrage->calRotation();
 			newBarrage->alive = true;
 			barrList.push_back(newBarrage);
+			Game::Effects.spawn(EffectType::CREATE_BARRAGE, x0, y0);
+			Game::Audio.play(L"barrage");
 		}
 	}
 }
 
-void Barrage::circleMill(Enemy& e, float speed, int r, int num, int x0, int y0) {
+void Barrage::circleMill(Enemy& e, float speed, int r, int num, int x0, int y0, BulletStyle s) {
 	if (e.isAlive() && e.fire) {
 		float R = (float)r;
 		for (int i = 0; i < num; ++i) {
-			Barrage* newBarrage = new Barrage(x0, y0);
+			Barrage* newBarrage = new Barrage((float)x0, (float)y0, s);
 			float DAangle = (float)i * (2 * PI / num);
 			newBarrage->moveType = 1;
 			newBarrage->lock = true;
@@ -172,76 +315,59 @@ void Barrage::circleMill(Enemy& e, float speed, int r, int num, int x0, int y0) 
 			newBarrage->omega = speed / R;
 			newBarrage->alive = true;
 			barrList.push_back(newBarrage);
+			Game::Effects.spawn(EffectType::CREATE_BARRAGE, x0, y0);
+			Game::Audio.play(L"barrage");
 		}
 	}
 }
 
-void Barrage::wheel(Enemy& e, float speed, float vl, int num, int x0, int y0) {
-	if (e.isAlive() && e.fire) {
-		float angleStep = 2 * PI / num;
-		int batchID = ++globalGroupID;
-
-		for (int i = 0; i < num; ++i) {
-			Barrage* newBarrage = new Barrage(x0, y0);
-			newBarrage->moveType = 2;
-			newBarrage->centerX = (float)x0;
-			newBarrage->centerY = (float)y0;
-			newBarrage->radius = 10; 
-			newBarrage->rSpeed = speed;
-			newBarrage->omega = vl / radius;
-
-			newBarrage->currentAngle = i * angleStep;
-			newBarrage->lock = true;
-			newBarrage->groupID = batchID;
-
-			newBarrage->x = newBarrage->centerX + newBarrage->radius * cos(newBarrage->currentAngle);
-			newBarrage->y = newBarrage->centerY + newBarrage->radius * sin(newBarrage->currentAngle);
-			newBarrage->alive = true;
-			barrList.push_back(newBarrage);
-		}
-	}
-}
-
-void Barrage::pincerAim(Enemy& e, float targetX, float targetY, float speed, int spacing, int pairNum, int x0, int y0) {
+void Barrage::pincerAim(Enemy& e, float targetX, float targetY, float speed, int spacing, int pairNum, int x0, int y0, BulletStyle s) {
 	if (e.isAlive() && e.fire) {
 
 		for (int i = 1; i <= pairNum; ++i) {
 			// 当前的横向偏移量
 			int offset = i * spacing;
 			// 左侧子弹
-			Barrage* leftB = new Barrage(x0 - offset, y0);
+			Barrage* leftB = new Barrage((float)(x0 - offset), (float)y0, s);
 			float angleL = atan2(targetY - y0, targetX - (x0 - offset));
 			leftB->vx = speed * cos(angleL);
 			leftB->vy = speed * sin(angleL);
+			leftB->calRotation();	
 			leftB->alive = true;
 			leftB->moveType = 0; 
 			barrList.push_back(leftB);
+			Game::Effects.spawn(EffectType::CREATE_BARRAGE, x0 - offset, y0);
 
 			// 右侧子弹
-			Barrage* rightB = new Barrage(x0 + offset, y0);
+			Barrage* rightB = new Barrage((float)(x0 + offset), (float)y0, s);
 			float angleR = atan2(targetY - y0, targetX - (x0 + offset));
 			rightB->vx = speed * cos(angleR);
 			rightB->vy = speed * sin(angleR);
+			rightB->calRotation();
 			rightB->alive = true;
 			rightB->moveType = 0; 
 			barrList.push_back(rightB);
+			Game::Effects.spawn(EffectType::CREATE_BARRAGE, x0 + offset, y0);
+			Game::Audio.play(L"barrage");
 		}
 	}
 }
 
-void Barrage::randomRain(float speed) {
+void Barrage::randomRain(float speed, BulletStyle s) {
 	int rndX = rand() % (int(LeftEdge), int(screenWidth + LeftEdge - darkGreenWidth));
-	Barrage* newBarrage = new Barrage((float)rndX, TopEdge); 
+	Barrage* newBarrage = new Barrage((float)rndX, (float)TopEdge, s);
 	newBarrage->vx = 0;          
 	newBarrage->vy = speed;    
 	newBarrage->alive = true;
 	newBarrage->moveType = 0;    
 	barrList.push_back(newBarrage);
+	Game::Effects.spawn(EffectType::CREATE_BARRAGE, rndX, TopEdge);
+	Game::Audio.play(L"barrage");
 }
 
-void Barrage::fiveStar(Enemy& e, int currentStep, int totalSteps, float R_orbit, float r_star, float stretchSpeed, float normalAcc, DWORD releaseTime, int starCount, int x0, int y0) {
+void Barrage::fiveStar(Enemy& e, int currentStep, int totalSteps, float R_orbit, float r_star, float stretchSpeed,
+	float normalAcc, DWORD releaseTime, int starCount, int x0, int y0, BulletStyle s) {
 	if (!e.isAlive()) return;
-
 	// 计算归一化进度 
 	float normalizedProgress = (float)currentStep / (float)totalSteps * 5.0f;
 	int edgeIdx = (int)normalizedProgress;
@@ -256,7 +382,6 @@ void Barrage::fiveStar(Enemy& e, int currentStep, int totalSteps, float R_orbit,
 	// 计算位置
 	float lx = pStart.x + (pEnd.x - pStart.x) * t;
 	float ly = pStart.y + (pEnd.y - pStart.y) * t;
-
 	// 计算参数
 	float dx = pEnd.x - pStart.x;
 	float dy = pEnd.y - pStart.y;
@@ -265,7 +390,7 @@ void Barrage::fiveStar(Enemy& e, int currentStep, int totalSteps, float R_orbit,
 	float uy = (len != 0) ? dy / len : 0;
 
 	// 切向速度
-	float stretchFactor = (t - 0.5f) * 2.0f;
+	float stretchFactor = -8.0f;
 	float vx_tan = ux * stretchFactor * stretchSpeed;
 	float vy_tan = uy * stretchFactor * stretchSpeed;
 	float nx = -uy;
@@ -274,21 +399,23 @@ void Barrage::fiveStar(Enemy& e, int currentStep, int totalSteps, float R_orbit,
 	// 确保法向量向外
 	float mx = (pStart.x + pEnd.x) / 2.0f;
 	float my = (pStart.y + pEnd.y) / 2.0f;
-	if (mx * nx + my * ny < 0) {
+	if (mx * nx + my * ny > 0) {
 		nx = -nx;
 		ny = -ny;
 	}
-	float accFactor = 1.0f - (t * 0.5f);
+	float zeroThreshold = 1.0f / 3.0f;
+	float scale = 0.8f;
+	float accFactor = (zeroThreshold - t) * scale;
 	float currentAcc = normalAcc * accFactor;
 	float ax = nx * currentAcc;
 	float ay = ny * currentAcc;
 
 	// 生成子弹 
 	for (int i = 0; i < starCount; ++i) {
-		float orbitAng = -PI / 2.0f + i * (2.0f * PI / (float)starCount);
+		float orbitAng = -PI / 2.0f + i * (2.0f * PI / (float)starCount);		
 		float cx = x0 + R_orbit * cos(orbitAng);
 		float cy = y0 + R_orbit * sin(orbitAng);
-		Barrage* b = new Barrage(cx + lx, cy + ly);
+		Barrage* b = new Barrage((float)(cx + lx), (float)(cy + ly), s);
 		b->moveType = 3;
 		b->vx = vx_tan;
 		b->vy = vy_tan;
@@ -298,10 +425,12 @@ void Barrage::fiveStar(Enemy& e, int currentStep, int totalSteps, float R_orbit,
 		b->alive = true;
 		b->lock = true;
 		b->groupID = globalGroupID;
-
 		barrList.push_back(b);
+		Game::Effects.spawn(EffectType::CREATE_BARRAGE, cx + lx, cy + ly);
+		Game::Audio.play(L"barrage");
 	}
 }
+
 void Barrage::update() {
 	// 统计还活跃的组
 	std::set<int> groupsInside;

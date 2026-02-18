@@ -44,10 +44,11 @@ public:
 	bool tryUseBomb();
 	void addBomb(int b);
 
-	int getBombCount() const { return bombCount; }
 	bool isInvincible() const { return invincible; }
 	int getPower() const { return power; }
 	int getLives() const { return lives; }
+	int getBombs() const { return bombCount; }
+	long long getScore() const { return score; }
 	static int getWidth() { return heroWidth; }
 	static int getHeight() { return heroHeight; }
 };

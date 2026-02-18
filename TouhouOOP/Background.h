@@ -9,10 +9,10 @@ enum class BGMode {
 
 class BackgroundManager {
 private:
+	IMAGE bg;
 	IMAGE bgNormal;
 	IMAGE bgSpellBase;  
 	IMAGE bgSpellLayer; // (¹ö¶¯²ã)
-	IMAGE tips;
 	BGMode currentMode;
 
 	float scrollY; 

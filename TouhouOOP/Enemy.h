@@ -34,6 +34,8 @@ class Enemy : public Role {
 	
 	DWORD te1, te2;
 	IMAGE enemy1, Elf;	
+	static IMAGE imgSpellCircle;
+	float spellAngle = 0.0f;
 
 protected:
 
@@ -51,7 +53,7 @@ public:
 	int texWidth;
 	int texHeight;
 	int currentPhaseIdx;
-
+	int moveCount;
 	Enemy(float _x = 0, float _y = 0, int _hp = 1);
 
 	int col, frame, row, sx, sy;
@@ -69,7 +71,6 @@ public:
 	bool isFire() const { return fire; }
 	bool isAlive() const { return alive; }
 	void setStrategy(MoveStrategy ms) { mover = ms; }	
-	void EnemyX(); 
 
 	void AddTask(BarrageTask task) { tasks.push_back(task); }
 	void ClearTasks() {	tasks.clear(); }

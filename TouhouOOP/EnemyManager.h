@@ -9,12 +9,12 @@
 #include <list>
 
 struct SpawnEvent {
-	int startTime;        // 波次开始后的延迟(ms)
-	int count;            // 生成数量
-	int interval;         // 生成间隔(ms)
-	int hp;               // 生命值
+	int startTime = 0;        // 波次开始后的延迟(ms)
+	int count = 0;            // 生成数量
+	int interval = 0;         // 生成间隔(ms)
+	int hp = 0;               // 生命值
 	eType type;           // 敌人外观类型
-	float startX, startY; // 起始位置
+	float startX = 0, startY = 0; // 起始位置
 	MoveStrategy moveLogic; // 移动策略
 	std::vector<BarrageTask> initTasks; // 初始携带的弹幕任务
 
@@ -25,7 +25,7 @@ struct SpawnEvent {
 };
 
 struct waveData {
-	int waveDelay; // 在开始这一波之前，需要等待多久 (ms)
+	int waveDelay = 0; // 在开始这一波之前，需要等待多久 (ms)
 	std::vector<SpawnEvent> events;
 };
 
@@ -35,14 +35,14 @@ private:
 	std::vector<Enemy*> enemyList;
 	std::queue<SpawnEvent> eventQueue;
 	std::list<SpawnEvent> activeEvents;
-	DWORD waveStartTime;
+	DWORD waveStartTime = 0;
 
 	unsigned int aliveEnemy;
 	unsigned int enemyIdx;
 	bool clear;
 
 	std::vector<float> currentPosition;
-	int interval;
+	int interval = 0;
 
 	DWORD t1, t2;
 
@@ -62,7 +62,7 @@ public:
 
 	std::vector<Enemy*>& getList() { return enemyList; }
 	int getAliveEnemy() const { return aliveEnemy; }
-	int getEnemyCount() const { return enemyList.size(); }
+	int getEnemyCount() const { return (int)enemyList.size(); }
 
 	struct DropReq {
 		float x, y;

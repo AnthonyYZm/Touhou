@@ -9,6 +9,7 @@ int const Enemy::bossHeight = 60;
 IMAGE Enemy::img;
 bool Enemy::resLoaded = false;
 IMAGE Enemy::sanae;
+IMAGE Enemy::imgSpellCircle;
 
 int getEnemyWidth(Enemy& e) {
     if (e.type == eType::normal) return Enemy::normalWidth;
@@ -39,6 +40,11 @@ Enemy::Enemy(float _x, float _y, int _hp) : Role(_x, _y, _hp) {
 	col = 0; frame = 0; row = 0;
 	enemyX = 0; enemyY = 0;
     te1 = 0, te2 = 0;
+    vx = 0.0f; vy = 0.0f;
+    sx = 0; sy = 0;
+    maxHp = _hp;
+    phase = 0;
+    currentPhaseIdx = 0;
 	fire = true;
 	type = eType::normal;
     texWidth = 48;
@@ -48,13 +54,56 @@ Enemy::Enemy(float _x, float _y, int _hp) : Role(_x, _y, _hp) {
 	birthTime = GetTickCount();
 	mover = nullptr;	
 	actionState = 0;
-}
-
-void Enemy::EnemyX() { //set round's enemyX
-
+	moveCount = 0;
+	spellAngle = 0.0f;
+    if (imgSpellCircle.getwidth() == 0) {
+        IMAGE tempImg;
+        loadimage(&tempImg, L"resource/barrage/etama2.png");
+        SetWorkingImage(&tempImg);
+        getimage(&imgSpellCircle, 128, 80, 128, 128);
+        SetWorkingImage(NULL);
+    }
 }
 
 void Enemy::draw() {
+
+    if (!alive) return;
+
+    // 魔法阵
+    if (this->type == eType::boss) {
+        spellAngle += 6.0f;
+        if (spellAngle >= 360.0f) spellAngle -= 360.0f;
+        HDC hDC = GetImageHDC(NULL);
+        int savedDC = SaveDC(hDC); // 保存当前状态
+        // 开启高级绘图模式 (允许旋转)
+        SetGraphicsMode(hDC, GM_ADVANCED);
+
+        XFORM xForm;
+        float rad = spellAngle * PI / 180.0f;
+        float cosA = cos(rad);
+        float sinA = sin(rad);
+        float scale = 3.0f;
+        // 旋转矩阵
+        xForm.eM11 = cosA * scale;
+        xForm.eM12 = sinA * scale;
+        xForm.eM21 = -sinA * scale;
+        xForm.eM22 = cosA * scale;
+        // 平移矩阵 
+        xForm.eDx = (float)x;
+        xForm.eDy = (float)y;
+        SetWorldTransform(hDC, &xForm);
+        HDC hSrc = GetImageHDC(&imgSpellCircle);
+        BLENDFUNCTION bf = { AC_SRC_OVER, 0, 128, AC_SRC_ALPHA };
+
+        AlphaBlend(hDC,
+            -64, -64, 128, 128,   // 目标位置 (相对于旋转中心)
+            hSrc,
+            0, 0, 128, 128,       // 源图片区域
+            bf
+        );
+        RestoreDC(hDC, savedDC);
+    }
+   
     te2 = GetTickCount();
     IMAGE* currentImg = &img; 
 
@@ -71,8 +120,6 @@ void Enemy::draw() {
         int maxFrames = (currentRow == 2) ? 3 : 4;
         sx = (row % maxFrames) * texWidth; 
         sy = currentRow * texHeight;       
-    }
-    else {
     }
     int drawX = (int)(x - width / 2.0f);
     int drawY = (int)(y - height / 2.0f);

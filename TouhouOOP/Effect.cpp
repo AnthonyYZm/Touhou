@@ -9,6 +9,8 @@ void EffectManager::init() {
 	loadimage(&imgReimuSpell, L"resource/other/ReimuSpell.png");
 	loadimage(&imgSanaeSpell, L"resource/other/sanaeSpell.png");
 	loadimage(&imgSpellName, L"resource/text/spellcardAttack.png");
+	loadimage(&imgBarrage, L"resource/barrage/bullet_create.png");
+	loadimage(&imgRibbon, L"resource/other/etama3.png");
 	loaded = true;
 }
 
@@ -43,7 +45,7 @@ void EffectManager::spawn(EffectType type, float x, float y, bool isPlayer) {
 
 	case EffectType::SPELL_CUTIN:
 		eff.imgPtr = isPlayer ? &imgReimuSpell : &imgSanaeSpell;
-		eff.totalFrames = 1000; // 持续 1000ms
+		eff.totalFrames = 1500; // 持续 1000ms
 		eff.frameInterval = 0;
 		eff.srcX = 0; eff.srcY = 0;
 		eff.srcW = eff.imgPtr->getwidth();
@@ -59,6 +61,12 @@ void EffectManager::spawn(EffectType type, float x, float y, bool isPlayer) {
 		// 初始位置设定在右下角
 		eff.x = (float)(LeftEdge + WIDTH - 150);
 		eff.y = (float)(TopEdge + HEIGHT - 100);
+		break;
+	case EffectType::CREATE_BARRAGE:
+		eff.imgPtr = &imgBarrage;
+		eff.totalFrames = 5; 
+		eff.frameInterval = 30; 
+		eff.srcX = 0; eff.srcY = 0; eff.srcW = 32; eff.srcH = 32;
 		break;
 	}
 	effects.push_back(eff);
@@ -88,13 +96,13 @@ void EffectManager::update() {
 
 		case EffectType::SPELL_CUTIN:
 		{
-			if (elapsed > 1000) it->active = false; 
+			if (elapsed > 1500) it->active = false; 
 			float gw = WIDTH; 
 			float startX = LeftEdge - it->srcW; 
 			float endX = LeftEdge + gw;      
 			float centerX = LeftEdge + gw / 2 - it->srcW / 2; 
 
-			float t = (float)elapsed / 1000.0f; 
+			float t = (float)elapsed / 1500.0f; 
 
 			if (t < 0.2f) {
 				// 0~0.2s: 快速进场 
@@ -137,6 +145,13 @@ void EffectManager::update() {
 			}
 			break;
 		}
+		case EffectType::CREATE_BARRAGE:
+			if (now - it->lastFrameTime >= it->frameInterval) {
+				it->currentFrame++;
+				it->lastFrameTime = now;
+				if (it->currentFrame >= it->totalFrames) it->active = false;
+			}
+			break;
 		}
 		++it;
 	}
@@ -168,6 +183,8 @@ void EffectManager::draw() {
 			putimagePNG((int)eff.x, (int)eff.y, eff.srcW, eff.srcH, eff.imgPtr, p.x, p.y, eff.srcW, eff.srcH);
 		}
 		else if (eff.type == EffectType::SPELL_CUTIN) {
+			long elapsed = now - eff.startTime;
+			drawSpellRibbons(elapsed);
 			putimagePNG((int)eff.x, (int)eff.y, eff.srcW, eff.srcH, eff.imgPtr, eff.srcX, eff.srcY, eff.srcW, eff.srcH);
 		}
 		else if (eff.type == EffectType::SPELL_NAME) {
@@ -176,6 +193,23 @@ void EffectManager::draw() {
 			putimagePNG((int)eff.x - drawW / 2, (int)eff.y - drawH / 2,
 				eff.srcW, eff.srcH, eff.imgPtr, 0, 0, drawW, drawH);
 		}
+		else if (eff.type == EffectType::CREATE_BARRAGE) {
+			int currentSrcX = eff.srcX + (eff.currentFrame * eff.srcW);
+			float progress = (float)eff.currentFrame / max(1, eff.totalFrames - 1);
+
+			float startScale = 0.5f; 
+			float endScale = 2.0f;  
+
+			// 线性插值计算当前比例
+			float currentScale = startScale + (endScale - startScale) * progress;
+
+			// 根据比例计算最终绘制在屏幕上的宽高
+			int dstW = (int)(eff.srcW * currentScale);
+			int dstH = (int)(eff.srcH * currentScale);
+
+			putimagePNG((int)(eff.x - dstW / 2), (int)(eff.y - dstH / 2), eff.srcW, eff.srcH,
+				eff.imgPtr,0, 0, dstW, dstH);
+		}
 	}
 }
 
@@ -183,6 +217,48 @@ void EffectManager::clearSpellName() {
 	for (auto& eff : effects) {
 		if (eff.type == EffectType::SPELL_NAME) {
 			eff.active = false;
+		}
+	}
+}
+
+void EffectManager::drawSpellRibbons(long elapsed) {
+	int imgW = imgRibbon.getwidth();
+	int imgH = 15;
+	if (imgW <= 0) return; // 防止除以0
+
+	int gapX = 200;
+	int cycleW = imgW + gapX;
+	int count = 12;      // 总共放置 6 条带子
+	int spacing = HEIGHT / (count + 1);
+
+	for (int i = 0; i < count; ++i) {
+		float y = (float)(spacing * (i + 1));
+
+		// 方向交替：偶数行向右(1)，奇数行向左(-1)
+		int dir = (i % 2 == 0) ? 1 : -1;
+
+		// 速度分层：每条带子速度略有不同
+		float speed = 0.5f;
+
+		// 计算当前总位移
+		float totalMove = elapsed * speed * dir;
+
+		// 【衔接逻辑】
+		// 使用 fmod 对位移取模，确保 startX 永远在 [-imgW, 0] 之间循环
+		float startX = fmod(totalMove, (float)cycleW);
+		while (startX > -cycleW) {
+			startX -= cycleW;
+		}
+
+		// 如果是向右滚动，取模后需要向左平移一个单位以填满左侧边缘
+		while (startX > -imgW) {
+			startX -= imgW;
+		}
+
+		// 瓦片平铺：从左侧起始点开始，一张接一张画，直到填满屏幕宽度
+		for (float x = startX; x < WIDTH; x += cycleW) {
+			// y - imgH / 2 是为了让带子中心对齐 y 坐标
+			putimagePNG((int)x, (int)y - imgH / 2, imgW, imgH, &imgRibbon, 0, 97, imgW * 2, imgH * 2);
 		}
 	}
 }

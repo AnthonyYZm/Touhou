@@ -3,25 +3,26 @@
 
 // 弹幕任务结构体 
 struct BarrageTask {
-	int type;           // 弹幕类型 
-	DWORD lastTime;     // 上一次发射的时间
-	int interval;       // 发射间隔 
-	float speed;        // 速度
-	float omega;        // 角速度 或 半径参数
-	int num;            // 数量
-	int r;              // 半径 (用于wheel等)
-	int dir;            // 方向 (用于straightMill等)
-	int x0, y0;      // 发射位置
-    float acc;			// 加速度 
-	int burstCount;    // 连发次数 
-	int burstInterval; // 连发间隔
-	int currentBurst; // 当前连发计数
-    float currentAngle;
+	int type;            // 弹幕类型 
+	DWORD lastTime;      // 上一次发射的时间
+	int interval;        // 发射间隔 
+	float speed;         // 速度
+	float omega;         // 角速度 或 半径参数
+	int num;             // 数量
+	int r;               // 半径 (用于wheel等)
+	int dir;             // 方向 (用于straightMill等)
+	int x0, y0;          // 发射位置
+    float acc;		   	 // 加速度 
+	int burstCount;      // 连发次数 
+	int burstInterval;   // 连发间隔
+	int currentBurst;    // 当前连发计数
+	float currentAngle;  // 当前角度 (用于旋转类弹幕)
 	DWORD lastBurstTime; // 上一发时间
+	int style;           // 弹幕样式
 
     BarrageTask(int _type, int _interval, float _speed, float _omega, int _num, int _r = 0, 
-        int _dir = 1, int _x = 0, int _y = 0, float _speedDec = 0.0f, 
-        int _burstCount = 1, int _burstInterval = 0) {
+        int _dir = 1, int _x = 0, int _y = 0, float _acc = 0.0f, 
+        int _burstCount = 1, int _burstInterval = 0, int _style = 0) {
         type = _type;
         interval = _interval;
         speed = _speed;
@@ -29,15 +30,15 @@ struct BarrageTask {
         num = _num;
         r = _r;
         dir = _dir;
-        x0 = _x;
-		y0 = _y;
+        x0 = _x; y0 = _y;
         lastTime = 0;
         burstCount = _burstCount;
         burstInterval = _burstInterval;
-        acc = _speedDec;
+        acc = _acc;
         currentBurst = 0;
         lastBurstTime = 0;
-		currentAngle = 0.0f;    
+		currentAngle = 0.0f;
+		style = _style;
     }
 };
 
@@ -76,54 +77,40 @@ public:
 
 inline void putimagePNG(int x, int y, int srcW, int srcH, IMAGE* srcImg, int sx, int sy, int dstW, int dstH)
 {
-    DWORD* dst = GetImageBuffer();
-    DWORD* src = GetImageBuffer(srcImg);
 
-    int srcTotalWidth = srcImg->getwidth();
-    int srcTotalHeight = srcImg->getheight();
-    int dstTotalWidth = getwidth();
-    int dstTotalHeight = getheight();
+    HDC hDC = GetImageHDC(NULL);
+    HDC hSrc = GetImageHDC(srcImg);
 
-    // 定义允许绘制的裁剪区域
     int clipLeft = LeftEdge;
     int clipTop = TopEdge;
     int clipRight = LeftEdge + WIDTH;
     int clipBottom = TopEdge + HEIGHT;
 
-    for (int i = 0; i < dstH; i++) {
-        int screenY = y + i;
-        if (screenY < 0 || screenY >= dstTotalHeight) continue;
-        if (screenY < clipTop || screenY >= clipBottom) continue;
-
-        int sourceY = sy + (i * srcH) / dstH;
-        if (sourceY >= srcTotalHeight) continue;
-
-        for (int j = 0; j < dstW; j++) {
-            int screenX = x + j;
-            if (screenX < 0 || screenX >= dstTotalWidth) continue;
-            if (screenX < clipLeft || screenX >= clipRight) continue;
-
-            int sourceX = sx + (j * srcW) / dstW;
-            if (sourceX >= srcTotalWidth) continue;
-
-            DWORD sc = src[sourceY * srcTotalWidth + sourceX];
-            BYTE sa = (sc >> 24) & 0xFF;
-            if (sa == 0) continue;
-
-            BYTE sb = (sc >> 16) & 0xFF;
-            BYTE sg = (sc >> 8) & 0xFF;
-            BYTE sr = sc & 0xFF;
-
-            DWORD& dc = dst[screenY * dstTotalWidth + screenX];
-            BYTE db = (dc >> 16) & 0xFF;
-            BYTE dg = (dc >> 8) & 0xFF;
-            BYTE dr = dc & 0xFF;
-
-            BYTE r = (sr * sa + dr * (255 - sa)) / 255;
-            BYTE g = (sg * sa + dg * (255 - sa)) / 255;
-            BYTE b = (sb * sa + db * (255 - sa)) / 255;
-
-            dc = RGB(r, g, b);
-        }
+    if (x >= clipRight || y >= clipBottom || x + dstW <= clipLeft || y + dstH <= clipTop) {
+        return;
     }
+
+    // 核心功能：GDI 裁剪 (Clipping)
+    // 保存当前 DC 状态 (这是为了不影响后续 UI 界面的绘制)
+    int savedDC = SaveDC(hDC);
+
+    // 设置裁剪区域：告诉显卡，只允许在 (clipLeft, clipTop) 到 (clipRight, clipBottom) 之间画图
+    IntersectClipRect(hDC, clipLeft, clipTop, clipRight, clipBottom);
+
+    // 绘制 (AlphaBlend)
+    BLENDFUNCTION bf = { 0 };
+    bf.BlendOp = AC_SRC_OVER;
+    bf.BlendFlags = 0;
+    bf.SourceConstantAlpha = 255;
+    bf.AlphaFormat = AC_SRC_ALPHA;
+
+    AlphaBlend(
+        hDC, x, y, dstW, dstH,
+        hSrc, sx, sy, srcW, srcH,
+        bf
+    );
+
+    // 恢复状态
+    // 恢复之前的 DC 状态 (取消裁剪限制)，防止影响 UI 绘制
+    RestoreDC(hDC, savedDC);
 }
