@@ -2,10 +2,6 @@
 #include "Role.h"
 #include "EnemyManager.h"
 
-/// <summary>
-/// @brief Barrage class
-/// @details Inherited from Role class, represents enemy barrages
-/// </summary>
 
 enum class bType : int {
 	down_st,

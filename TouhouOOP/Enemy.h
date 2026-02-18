@@ -15,10 +15,6 @@ class Enemy;
 // 定义移动策略函数签名：接收 自身指针 和 存活时间(ms)
 using MoveStrategy = std::function<void(Enemy*, int)>;
 
-/// <summary>
-/// @brief Enemy class
-/// @details Inherited from Role class, represents enemy characters
-/// </summary>
 class Enemy : public Role {
 
 	static const int normalWidth;

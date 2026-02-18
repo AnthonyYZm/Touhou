@@ -32,8 +32,7 @@ void AudioManager::init() {
 		bool isPooled = std::find(pooledSounds.begin(), pooledSounds.end(), name) != pooledSounds.end();
 
 		if (isPooled) {
-			// [核心] 如果是高频音效，加载 POOL_SIZE 次
-			// 例如：barrage_0, barrage_1, ... barrage_14
+			// 如果是高频音效，加载 POOL_SIZE 次
 			for (int i = 0; i < POOL_SIZE; ++i) {
 				std::wstring alias = name + L"_" + std::to_wstring(i);
 				std::wstring cmd = L"open \"" + path + L"\" alias " + alias;
@@ -43,7 +42,7 @@ void AudioManager::init() {
 			lastPlayTime[name] = 0;
 		}
 		else {
-			// 普通音效 (BGM 或低频音效) 只加载一次
+			// 普通音效只加载一次
 			std::wstring cmd = L"open \"" + path + L"\" alias " + name;
 			mciSendString(cmd.c_str(), NULL, 0, NULL);
 		}
@@ -57,24 +56,21 @@ void AudioManager::init() {
 void AudioManager::play(const std::wstring& name) {
 	// 安全检查
 	if (sounds.find(name) == sounds.end()) return;
-	// 音效限流 (Sound Throttling)
+	// 音效限流 
 	DWORD now = GetTickCount();
 
 	// 针对高频音效进行限流
-	// 如果是 "barrage" (发射) 或 "break" (爆炸)，限制播放频率
 	if (name == L"barrage" || name == L"break" || name == L"hit") {
-		// 设定最小间隔为 40ms (约每秒 25 次，足够密集了)
-		// 如果你想更密集，可以改为 20ms；想更流畅，改为 50ms
+		// 设定最小间隔为 40ms，约每秒 25 次
 		const int MIN_INTERVAL = 40;
 
 		if (now - lastPlayTime[name] < MIN_INTERVAL) {
-			return; // 还在冷却中，跳过不播放，直接返回！
+			return; 
 		}
-		// 更新播放时间
 		lastPlayTime[name] = now;
 	}
 
-	// 下面是原有的播放逻辑
+	// 正常播放其他音效
 	bool isPooled = std::find(pooledSounds.begin(), pooledSounds.end(), name) != pooledSounds.end();
 
 	if (isPooled) {

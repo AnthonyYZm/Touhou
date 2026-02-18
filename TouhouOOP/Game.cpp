@@ -115,7 +115,7 @@ void Game::InitLevels() {
 		w1.waveDelay = 2000; // 第一波开始前等待 2 秒
 		SpawnEvent e1;
 		e1.startTime = 500; // 波次开始后 500ms 生成
-		e1.count = 15; 		// 生成 5 个敌人
+		e1.count = 10; 		// 生成 5 个敌人
 		e1.interval = 400;  // 每 400ms 生成一个
 		e1.hp = 1;
 		e1.type = eType::normal; // 普通敌人
@@ -124,31 +124,6 @@ void Game::InitLevels() {
 		//e1.initTasks.push_back(BarrageTask((int)bType::down_st, 500, 5.0f, 0, 1)); // 弹幕任务
 		w1.events.push_back(e1);
 		waveQueue.push(w1);
-
-		// 第二波
-		waveData w2;
-		w2.waveDelay = 2000;
-
-		SpawnEvent e2;
-		e2.startTime = 2000;
-		e2.count = 1;
-		e2.type = eType::elf;
-		e2.hp = 20;
-		e2.startX = CentralX + 200; e2.startY = TopEdge;
-		e2.moveLogic = Moves::Hover(CentralY, 2.0f);
-		e2.initTasks.push_back(BarrageTask((int)bType::windmill_st, 120, 4.0f, 5, 1));
-
-		SpawnEvent e3;
-		e3.startTime = 2000;
-		e3.count = 1;
-		e3.type = eType::elf;
-		e3.hp = 20;
-		e3.startX = CentralX - 200; e3.startY = TopEdge;
-		e3.moveLogic = Moves::Hover(CentralY, 2.0f);
-		e3.initTasks.push_back(BarrageTask((int)bType::windmill_st, 80, 4.0f, 3, 1));
-		w2.events.push_back(e2);
-		w2.events.push_back(e3);
-		waveQueue.push(w2);
 
 		// 第三波
 		waveData w3;
@@ -401,7 +376,7 @@ void Game::InitLevels() {
 				1,        // dir (未使用)                 
 				100,      // x0 星星半径，控制五角星大小                   
 				0,        // y0 (未使用)                  
-				0.04f,     // acc 抛射加速度，控制星星炸开的力度，0.1~0.2 之间效果最好                   
+				0.02f,     // acc 抛射加速度，控制星星炸开的力度，0.1~0.2 之间效果最好                   
 				40,       // burstCount 总共画100笔，越多越细腻                 
 				15,       // burstInterval 每笔间隔10ms，作画总耗时 1秒
 				(int)BulletStyle::BLUE_
@@ -646,7 +621,7 @@ void Game::UpdateItems() {
 
 void Game::CheckCollision() {
 
-	float heroR = (float)Hero.JudgeR;
+	float heroR = (float)Hero.JudgeR - 1;
 	float bulletR = 6.0f;
 	float barrageR = 5.0f;
 	auto& enemies = E.getList();
@@ -737,7 +712,7 @@ void Game::CheckCollision() {
 			float bR = b->getWidth() / 2; 
 			float barrR = 0;
 			if (b->getStyle() == BulletStyle::RICE_BULE || b->getStyle() == BulletStyle::RICE_RED) barrR = bR;
-			else barrR = bR - 2;
+			else barrR = bR - 4;
 
 			if (checkCircleCollide(Hero.x, Hero.y, heroR, barrCx, barrCy, barrR)) {
 				Hero.hit();
@@ -963,31 +938,27 @@ void Game::adjustWindow() {
 }
 
 void Game::drawUI() {
-	// 1. 设置文字样式和颜色
+
+	// 置文字样式和颜色
 	settextstyle(40, 0, L"微软雅黑", 0, 0, FW_BOLD, false, false, false);
 	settextcolor(WHITE);
 	setbkmode(TRANSPARENT);
 
-	// 2. 定义起始坐标 (主舞台右边缘外侧)
 	int uiX = LeftEdge + WIDTH + 30;
 	int uiY = 100;
 
-	// --- 绘制残机 (Player) ---
+	// 绘制残机
 	settextcolor(RED);
 	outtextxy(uiX, uiY, L"Player");
-
-	// 使用循环画出星形，或者直接显示数字
-	// 这里演示显示数字和符号组合
 	wchar_t lifeStr[16];
 	swprintf_s(lifeStr, L"★ × %d", Hero.getLives()); 
 	settextcolor(RED); // 残机通常用粉色/红色
 	outtextxy(uiX + 10, uiY + 40, lifeStr);
 
-	// --- 绘制符卡 (Spell / Bomb) ---
+	// 绘制符卡
 	uiY += 100;
 	settextcolor(YELLOW);
 	outtextxy(uiX, uiY, L"Spell");
-
 	wchar_t bombStr[16];
 	swprintf_s(bombStr, L"★ × %d", Hero.getBombs()); 
 	settextcolor(YELLOW);

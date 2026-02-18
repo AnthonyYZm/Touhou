@@ -9,9 +9,9 @@
 #include <list>
 
 struct SpawnEvent {
-	int startTime = 0;        // 波次开始后的延迟(ms)
+	int startTime = 0;        // 波次开始后的延迟
 	int count = 0;            // 生成数量
-	int interval = 0;         // 生成间隔(ms)
+	int interval = 0;         // 生成间隔
 	int hp = 0;               // 生命值
 	eType type;           // 敌人外观类型
 	float startX = 0, startY = 0; // 起始位置
@@ -25,7 +25,7 @@ struct SpawnEvent {
 };
 
 struct waveData {
-	int waveDelay = 0; // 在开始这一波之前，需要等待多久 (ms)
+	int waveDelay = 0; // 在开始这一波之前，需要等待多久
 	std::vector<SpawnEvent> events;
 };
 

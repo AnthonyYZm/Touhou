@@ -24,9 +24,6 @@ Hero::Hero(float _x, float _y) : Role(_x, _y, 1) {
 	maxBomb = 5;
 }
 
-/*Draw hero
-	Use sprite sheet for animation	 
-*/
 void Hero::draw() {
 	if (invincible) {
 		if ((GetTickCount() / 50) % 2 == 0) return; 
@@ -52,7 +49,7 @@ void Hero::JudgePoint() {
 	fillcircle((int)x, (int)y, JudgeR);
 }	
 
-// Hero control by arrow key
+// 控制自机
 void Hero::control(float speed) {
 	if (GetAsyncKeyState(VK_LEFT) && GetAsyncKeyState(VK_UP) || GetAsyncKeyState(VK_RIGHT) && GetAsyncKeyState(VK_UP) ||
 		GetAsyncKeyState(VK_LEFT) && GetAsyncKeyState(VK_DOWN) || GetAsyncKeyState(VK_RIGHT) && GetAsyncKeyState(VK_DOWN)) {
@@ -76,8 +73,7 @@ void Hero::control(float speed) {
 	}
 
 }
-
-// Hero move and set boundary
+// 移动，边界检测
 void Hero::move() {
 	if (invincible && GetTickCount() > invincibleEnd) {
 		invincible = false;

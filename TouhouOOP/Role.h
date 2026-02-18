@@ -89,9 +89,7 @@ inline void putimagePNG(int x, int y, int srcW, int srcH, IMAGE* srcImg, int sx,
     if (x >= clipRight || y >= clipBottom || x + dstW <= clipLeft || y + dstH <= clipTop) {
         return;
     }
-
-    // 核心功能：GDI 裁剪 (Clipping)
-    // 保存当前 DC 状态 (这是为了不影响后续 UI 界面的绘制)
+    // GDI 裁剪 
     int savedDC = SaveDC(hDC);
 
     // 设置裁剪区域：告诉显卡，只允许在 (clipLeft, clipTop) 到 (clipRight, clipBottom) 之间画图
@@ -111,6 +109,5 @@ inline void putimagePNG(int x, int y, int srcW, int srcH, IMAGE* srcImg, int sx,
     );
 
     // 恢复状态
-    // 恢复之前的 DC 状态 (取消裁剪限制)，防止影响 UI 绘制
     RestoreDC(hDC, savedDC);
 }

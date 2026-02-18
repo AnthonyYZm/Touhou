@@ -14,7 +14,7 @@ namespace Moves {
             };
     }
 
-    // 2. 正弦波移动 (参数：中心X，振幅，频率，下落速度)
+    // 正弦波移动 (参数：中心X，振幅，频率，下落速度)
     static MoveStrategy SineWave(float centerX, float amplitude, float freq, float speedY) {
         return [=](Enemy* e, int t) {
             e->y += speedY; // Y轴匀速
@@ -23,7 +23,7 @@ namespace Moves {
             };
     }
 
-    // 3. 悬停 
+    //悬停 
     static MoveStrategy Hover(float targetY, float speed) {
         return [=](Enemy* e, int t) {
             if (e->y < targetY) {
@@ -79,7 +79,7 @@ namespace Moves {
                     break;
 
                 case 1: // 第二个周期：向下移动
-                    e->y += speedY * 2; // 这里可以根据需要调整倍数
+                    e->y += speedY * 2; 
                     break;
 
                 case 2: // 第三个周期：向右上移动

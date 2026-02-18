@@ -2,13 +2,6 @@
 #include "Role.h"
 #include "Hero.h"
 
-/// <summary>
-/// @brief Bullet class
-/// @details Inherited from Role class, represents bullets fired by the hero
-/// </summary>
-/// 
-;
-
 class Enemy;
 
 class Bullet : public Role {

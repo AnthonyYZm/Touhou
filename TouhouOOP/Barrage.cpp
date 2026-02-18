@@ -93,14 +93,13 @@ void Barrage::calRotation() {
 	float angle = atan2(vy, vx);
 	float theta = PI / 2.0f - angle;
 
-	// 1. 创建正方形画布，边长=max(w, h)
+	// 创建正方形画布
 	int side = (std::max)(r.w, r.h);
 	IMAGE squareImg(side, side);
 	SetWorkingImage(&squareImg);
 	// 填充透明
 	DWORD* buf = GetImageBuffer(&squareImg);
 	memset(buf, 0, side * side * sizeof(DWORD));
-	// 2. 将原子弹贴图居中画到正方形画布
 	int offsetX = (side - r.w) / 2;
 	int offsetY = (side - r.h) / 2;
 	SetWorkingImage(imgPtr);
@@ -109,11 +108,9 @@ void Barrage::calRotation() {
 	SetWorkingImage(&squareImg);
 	putimage(offsetX, offsetY, &tempImg, SRCPAINT);
 	SetWorkingImage(NULL);
-
-	// 3. 旋转
+	// 旋转
 	rotateimage(&cacheImg, &squareImg, theta);
-
-	// 4. 修复透明度
+	// 修复透明度
 	DWORD* pMem = GetImageBuffer(&cacheImg);
 	int pixelCount = cacheImg.getwidth() * cacheImg.getheight();
 	for (int i = 0; i < pixelCount; i++) {
@@ -121,7 +118,6 @@ void Barrage::calRotation() {
 			pMem[i] |= 0xFF000000;
 		}
 	}
-
 	this->isRotated = true;
 }
 

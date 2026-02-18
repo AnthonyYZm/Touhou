@@ -2,10 +2,6 @@
 #include "Role.h"
 #include "Audio.h"
 
-/// <summary>
-///	@brief Hero class
-/// @details Inherited from Role class, represents the player's character
-/// </summary>
 class Hero : public Role {
 
 	int row;

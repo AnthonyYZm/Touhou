@@ -228,7 +228,7 @@ void EffectManager::drawSpellRibbons(long elapsed) {
 
 	int gapX = 200;
 	int cycleW = imgW + gapX;
-	int count = 12;      // 总共放置 6 条带子
+	int count = 12;      // 数量
 	int spacing = HEIGHT / (count + 1);
 
 	for (int i = 0; i < count; ++i) {
@@ -236,26 +236,19 @@ void EffectManager::drawSpellRibbons(long elapsed) {
 
 		// 方向交替：偶数行向右(1)，奇数行向左(-1)
 		int dir = (i % 2 == 0) ? 1 : -1;
-
-		// 速度分层：每条带子速度略有不同
 		float speed = 0.5f;
-
 		// 计算当前总位移
 		float totalMove = elapsed * speed * dir;
-
-		// 【衔接逻辑】
 		// 使用 fmod 对位移取模，确保 startX 永远在 [-imgW, 0] 之间循环
 		float startX = fmod(totalMove, (float)cycleW);
 		while (startX > -cycleW) {
 			startX -= cycleW;
 		}
-
 		// 如果是向右滚动，取模后需要向左平移一个单位以填满左侧边缘
 		while (startX > -imgW) {
 			startX -= imgW;
 		}
-
-		// 瓦片平铺：从左侧起始点开始，一张接一张画，直到填满屏幕宽度
+		// 从左侧起始点开始，一张接一张画，直到填满屏幕宽度
 		for (float x = startX; x < WIDTH; x += cycleW) {
 			// y - imgH / 2 是为了让带子中心对齐 y 坐标
 			putimagePNG((int)x, (int)y - imgH / 2, imgW, imgH, &imgRibbon, 0, 97, imgW * 2, imgH * 2);
