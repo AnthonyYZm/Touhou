@@ -3,7 +3,7 @@
 ---
 
 * 一个基于 **C++** 和 **EasyX** 图形库开发的东方 Project STG游戏。本项目实现了动态波次系统，可自由配置敌人。
-* 演示视频：(https://www.bilibili.com/video/BV19pZ9BJEii)
+* [演示视频](https://www.bilibili.com/video/BV19pZ9BJEii)
 
 ---
 
