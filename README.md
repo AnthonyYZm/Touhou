@@ -3,12 +3,13 @@
 ---
 
 * 一个基于 **C++** 和 **EasyX** 图形库开发的东方 Project STG游戏。本项目实现了动态波次系统，可自由配置敌人。
+* 演示视频：(https://www.bilibili.com/video/BV19pZ9BJEii)
 
 ---
 
 ## 技术栈
 * **语言标准**: ISO C++17 。
-* **图形庫**: [EasyX Graphics Library](https://easyx.cn/)。
+* **图形库**: [EasyX Graphics Library](https://easyx.cn/)。
 * **核心架构**:
     * `Game`: 维护游戏主循环、碰撞检测及波次逻辑。
     * `EnemyManager`: 负责敌人的生成、掉落物管理及生命周期回收。
