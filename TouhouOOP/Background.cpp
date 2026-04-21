@@ -19,8 +19,8 @@ void BackgroundManager::setMode(BGMode mode) {
 }
 
 void BackgroundManager::update() {
-	// ÏòÏÂ¹ö¶¯
-	float scrollSpeed = (currentMode == BGMode::BOSS_SPELL) ? 2.0f : 1.0f; // ·û¿¨½×¶Î¿ÉÒÔ¹ö¿ìµã
+	// ÃÃ²ÃÃ‚Â¹Ã¶Â¶Â¯
+	float scrollSpeed = (currentMode == BGMode::BOSS_SPELL) ? 2.0f : 1.0f; // Â·Ã»Â¿Â¨Â½Ã—Â¶ÃÂ¿Ã‰Ã’Ã”Â¹Ã¶Â¿Ã¬ÂµÃ£
 	scrollY += scrollSpeed;
 
 	int currentBGHeight = (currentMode == BGMode::BOSS_SPELL) ? bgSpellLayer.getheight() : HEIGHT;
@@ -42,20 +42,24 @@ void TileDraw(IMAGE* img, float scrollY, int alpha = 255) {
 	}
 }
 
+void BackgroundManager::drawBackdropOnly() {
+	putimage(0, 0, &bg);
+}
+
 void BackgroundManager::draw() {
 	putimage(0, 0, &bg);
 	HRGN rgn = CreateRectRgn(LeftEdge, TopEdge, LeftEdge + WIDTH, TopEdge + HEIGHT);
 	setcliprgn(rgn);
 	if (currentMode == BGMode::NORMAL) {
-		//ÆÕÍ¨±³¾°¹ö¶¯Âß¼­
+		//Ã†Ã•ÃÂ¨Â±Â³Â¾Â°Â¹Ã¶Â¶Â¯Ã‚ÃŸÂ¼Â­
 		int offset = (int)scrollY;
 		putimage(LeftEdge, TopEdge + offset, &bgNormal);
 		putimage(LeftEdge, TopEdge + offset - HEIGHT, &bgNormal);
 	}
 	else if (currentMode == BGMode::BOSS_SPELL) {
-		// µ×²ã
+		// ÂµÃ—Â²Ã£
 		putimage(LeftEdge, TopEdge, &bgSpellBase);
-		// ¶¥²ã
+		// Â¶Â¥Â²Ã£
 		TileDraw(&bgSpellLayer, scrollY);
 	}
 	setcliprgn(NULL);

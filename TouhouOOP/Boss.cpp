@@ -1,11 +1,11 @@
+#pragma execution_character_set("utf-8")
 #include "Boss.h"
-
 Boss::Boss(float _x, float _y) : Enemy(_x, _y, 1000) {
     currentPhaseIdx = -1;
     phaseStartTime = GetTickCount();
     tasksLoaded = false;
-    type = eType::elf; 
-    frame = 5; 
+    type = eType::elf;
+    frame = 5;
 }
 
 void Boss::addPhase(BossPhase p) {
@@ -20,20 +20,20 @@ void Boss::addPhase(BossPhase p) {
 void Boss::loadCurrentPhase() {
     if (currentPhaseIdx >= phases.size()) return;
     BossPhase& p = phases[currentPhaseIdx];
-    // ÖØÖÃ×´Ì¬
+    // é‡ç½®çŠ¶æ€
     phaseStartTime = GetTickCount();
-    this->ClearTasks(); 
-    // ¼ÓÔØĞÂµ¯Ä»
+    this->ClearTasks();
+    // åŠ è½½æ–°å¼¹å¹•
     for (auto& task : p.tasks) {
         this->AddTask(task);
     }
-    // ÖØÖÃÑªÁ¿
+    // é‡ç½®è¡€é‡
     this->maxHp = p.phaseHp;
     this->hp = p.phaseHp;
-    // ´¥·¢ÌØĞ§
+    // è§¦å‘ç‰¹æ•ˆ
     if (onEvent) {
         if (p.isSpellCard) {
-            onEvent(x, y, 1); 
+            onEvent(x, y, 1);
         }
         else {
         }
@@ -44,9 +44,9 @@ void Boss::loadCurrentPhase() {
 void Boss::nextPhase() {
     if (onEvent) onEvent(x, y, 2);
     currentPhaseIdx++;
-    tasksLoaded = false; 
+    tasksLoaded = false;
     if (currentPhaseIdx >= phases.size()) {
-        alive = false; 
+        alive = false;
     }
 }
 
@@ -56,19 +56,19 @@ void Boss::move() {
     if (currentPhaseIdx == -1) currentPhaseIdx = 0;
     if (!tasksLoaded) {
         loadCurrentPhase();
-        if (!alive) return; 
+        if (!alive) return;
     }
     BossPhase& currentP = phases[currentPhaseIdx];
     DWORD now = GetTickCount();
     int timePassed = now - phaseStartTime;
     int t = now - phaseStartTime;
-    if (t < currentP.waitTime) this->fire = false; 
-    else this->fire = true;  
-    if (currentP.moveLogic){ 
+    if (t < currentP.waitTime) this->fire = false;
+    else this->fire = true;
+    if (currentP.moveLogic) {
         currentP.moveLogic(this, timePassed);
     }
-    // Ìõ¼ş A: »÷ÆÆ
-    // Ìõ¼ş B: ³¬Ê±
+    // æ¡ä»¶ A: å‡»ç ´
+    // æ¡ä»¶ B: è¶…æ—¶
     if (hp <= 0 || timePassed >= currentP.duration) {
         nextPhase();
     }
@@ -96,7 +96,7 @@ int Boss::getPhaseTimeLeft() const {
     if (currentPhaseIdx >= 0 && currentPhaseIdx < phases.size()) {
         int passed = GetTickCount() - phaseStartTime;
         int left = phases[currentPhaseIdx].duration - passed;
-        return (left > 0) ? (left / 1000) : 0; 
+        return (left > 0) ? (left / 1000) : 0;
     }
     return 0;
 }

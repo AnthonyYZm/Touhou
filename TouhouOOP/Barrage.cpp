@@ -1,3 +1,4 @@
+#pragma execution_character_set("utf-8")
 #include "Barrage.h"
 #include "Game.h"
 
@@ -46,7 +47,7 @@ Barrage::~Barrage() {
 	barrList.clear();
 }
 
-// ¸¨Öúº¯Êı£º¼ÆËãÎå½ÇĞÇ¶¥µã×ø±ê
+// è¾…åŠ©å‡½æ•°ï¼šè®¡ç®—äº”è§’æ˜Ÿé¡¶ç‚¹åæ ‡
 POINTFLOAT getStarVertex(int index, float r) {
 	float angle = -PI / 2.0f + index * (2.0f * PI / 5.0f);
 	return { r * cos(angle), r * sin(angle) };
@@ -65,6 +66,7 @@ BulletRect Barrage::getRect(BulletStyle s) {
 	case BulletStyle::RICE_RED: return { 36, 0, riceWidth, riceHeight };
 	case BulletStyle::RED_: return { 0, 0, darkGreenWidth, darkGreenHeight };
 	case BulletStyle::BLUE_BIG: return { 0, 0, (int)(darkGreenWidth * 1.5), (int)(darkGreenWidth * 1.5) };
+	default: return { 0, 0, darkGreenWidth, darkGreenHeight };
 	}
 }
 
@@ -73,7 +75,7 @@ int Barrage::getWidth() const { return getRect(this->style).w; }
 int Barrage::getHeight() const { return getRect(this->style).h; }
 
 void Barrage::calRotation() {
-	// Ö»¶ÔÃ×ĞÍµ¯Ä»Ğı×ª
+
 	bool isRice = (style == BulletStyle::RICE_BULE || style == BulletStyle::RICE_RED);
 	if (!isRice) {
 		isRotated = false;
@@ -89,15 +91,13 @@ void Barrage::calRotation() {
 
 	if (!imgPtr || imgPtr->getwidth() == 0) return;
 
-	// ¼ÆËãĞı×ª½Ç¶È
 	float angle = atan2(vy, vx);
 	float theta = PI / 2.0f - angle;
 
-	// ´´½¨Õı·½ĞÎ»­²¼
 	int side = (std::max)(r.w, r.h);
 	IMAGE squareImg(side, side);
 	SetWorkingImage(&squareImg);
-	// Ìî³äÍ¸Ã÷
+	// å¡«å……é€æ˜
 	DWORD* buf = GetImageBuffer(&squareImg);
 	memset(buf, 0, side * side * sizeof(DWORD));
 	int offsetX = (side - r.w) / 2;
@@ -108,9 +108,9 @@ void Barrage::calRotation() {
 	SetWorkingImage(&squareImg);
 	putimage(offsetX, offsetY, &tempImg, SRCPAINT);
 	SetWorkingImage(NULL);
-	// Ğı×ª
+	// æ—‹è½¬	
 	rotateimage(&cacheImg, &squareImg, theta);
-	// ĞŞ¸´Í¸Ã÷¶È
+	// ä¿®å¤é€æ˜åº¦
 	DWORD* pMem = GetImageBuffer(&cacheImg);
 	int pixelCount = cacheImg.getwidth() * cacheImg.getheight();
 	for (int i = 0; i < pixelCount; i++) {
@@ -123,7 +123,7 @@ void Barrage::calRotation() {
 
 void Barrage::draw() {
 	if (isFriendly) {
-		// ´óÓñ
+		// å¤§ç‰
 		int drawW = 200;
 		int drawH = 200;
 		putimagePNG((int)(x - drawW / 2), (int)(y - drawH / 2), 256, 256, &mxtsSpell, 0, 0, drawW, drawH);
@@ -234,10 +234,15 @@ void Barrage::straightMill(Enemy& e, float speed, int omega, int num, int x0, in
 			newBarrage->calRotation();
 			newBarrage->alive = true;
 			barrList.push_back(newBarrage);
-			Game::Effects.spawn(EffectType::CREATE_BARRAGE, x0, y0);
-			Game::Audio.play(L"barrage");
+			Game::Effects.spawn(EffectType::CREATE_BARRAGE, (float)x0, (float)y0);
 		}
 		spin += omega;
+		static DWORD lastSoundTime = 0;
+		DWORD now = GetTickCount();
+		if (now - lastSoundTime > 80) {
+			Game::Audio.play(L"barrage");
+			lastSoundTime = now;
+		}
 	}
 }
 
@@ -254,10 +259,15 @@ void Barrage::straightMill2(Enemy& e, float speed, int omega, int num, int x0, i
 			newBarrage->calRotation();
 			newBarrage->alive = true;
 			barrList.push_back(newBarrage);
-			Game::Effects.spawn(EffectType::CREATE_BARRAGE, x0, y0);
-			Game::Audio.play(L"barrage");
+			Game::Effects.spawn(EffectType::CREATE_BARRAGE, (float)x0, (float)y0);
 		}
 		spin += omega;
+		static DWORD lastSoundTime = 0;
+		DWORD now = GetTickCount();
+		if (now - lastSoundTime > 80) {
+			Game::Audio.play(L"barrage");
+			lastSoundTime = now;
+		}
 	}
 }
 
@@ -273,8 +283,13 @@ void Barrage::directionalMill(Enemy& e, float speed, float baseAngle, int num, i
 			newBarrage->alive = true;
 			newBarrage->moveType = 0; 
 			barrList.push_back(newBarrage);
-			Game::Effects.spawn(EffectType::CREATE_BARRAGE, x0, y0);
+			Game::Effects.spawn(EffectType::CREATE_BARRAGE, (float)x0, (float)y0);
+		}
+		static DWORD lastSoundTime = 0;
+		DWORD now = GetTickCount();
+		if (now - lastSoundTime > 80) { 
 			Game::Audio.play(L"barrage");
+			lastSoundTime = now;
 		}
 	}
 }
@@ -290,7 +305,7 @@ void Barrage::fireWork(Enemy& e, float speed, int num, int x0, int y0, BulletSty
 			newBarrage->calRotation();
 			newBarrage->alive = true;
 			barrList.push_back(newBarrage);
-			Game::Effects.spawn(EffectType::CREATE_BARRAGE, x0, y0);
+			Game::Effects.spawn(EffectType::CREATE_BARRAGE, (float)x0, (float)y0);
 			Game::Audio.play(L"barrage");
 		}
 	}
@@ -311,7 +326,7 @@ void Barrage::circleMill(Enemy& e, float speed, int r, int num, int x0, int y0, 
 			newBarrage->omega = speed / R;
 			newBarrage->alive = true;
 			barrList.push_back(newBarrage);
-			Game::Effects.spawn(EffectType::CREATE_BARRAGE, x0, y0);
+			Game::Effects.spawn(EffectType::CREATE_BARRAGE, (float)x0, (float)y0);
 			Game::Audio.play(L"barrage");
 		}
 	}
@@ -321,9 +336,9 @@ void Barrage::pincerAim(Enemy& e, float targetX, float targetY, float speed, int
 	if (e.isAlive() && e.fire) {
 
 		for (int i = 1; i <= pairNum; ++i) {
-			// µ±Ç°µÄºáÏòÆ«ÒÆÁ¿
+			// å½“å‰çš„æ¨ªå‘åç§»é‡
 			int offset = i * spacing;
-			// ×ó²à×Óµ¯
+			// å·¦ä¾§å­å¼¹
 			Barrage* leftB = new Barrage((float)(x0 - offset), (float)y0, s);
 			float angleL = atan2(targetY - y0, targetX - (x0 - offset));
 			leftB->vx = speed * cos(angleL);
@@ -334,7 +349,7 @@ void Barrage::pincerAim(Enemy& e, float targetX, float targetY, float speed, int
 			barrList.push_back(leftB);
 			Game::Effects.spawn(EffectType::CREATE_BARRAGE, x0 - offset, y0);
 
-			// ÓÒ²à×Óµ¯
+			// å³ä¾§å­å¼¹
 			Barrage* rightB = new Barrage((float)(x0 + offset), (float)y0, s);
 			float angleR = atan2(targetY - y0, targetX - (x0 + offset));
 			rightB->vx = speed * cos(angleR);
@@ -364,35 +379,40 @@ void Barrage::randomRain(float speed, BulletStyle s) {
 void Barrage::fiveStar(Enemy& e, int currentStep, int totalSteps, float R_orbit, float r_star, float stretchSpeed,
 	float normalAcc, DWORD releaseTime, int starCount, int x0, int y0, BulletStyle s) {
 	if (!e.isAlive()) return;
-	// ¼ÆËã¹éÒ»»¯½ø¶È 
+
+	if (currentStep == 0) {
+		globalGroupID++;
+	}
+
+	// è®¡ç®—å½’ä¸€åŒ–è¿›åº¦ 
 	float normalizedProgress = (float)currentStep / (float)totalSteps * 5.0f;
 	int edgeIdx = (int)normalizedProgress;
 	if (edgeIdx >= 5) edgeIdx = 4;
 	float t = normalizedProgress - (float)edgeIdx;
 
-	// È·¶¨¶¥µã 
+	// ç¡®å®šé¡¶ç‚¹ 
 	int indices[] = { 4, 1, 3, 0, 2, 4 };
 	POINTFLOAT pStart = getStarVertex(indices[edgeIdx], r_star);
 	POINTFLOAT pEnd = getStarVertex(indices[edgeIdx + 1], r_star);
 
-	// ¼ÆËãÎ»ÖÃ
+	// è®¡ç®—ä½ç½®
 	float lx = pStart.x + (pEnd.x - pStart.x) * t;
 	float ly = pStart.y + (pEnd.y - pStart.y) * t;
-	// ¼ÆËã²ÎÊı
+	// è®¡ç®—å‚æ•°
 	float dx = pEnd.x - pStart.x;
 	float dy = pEnd.y - pStart.y;
 	float len = sqrt(dx * dx + dy * dy);
 	float ux = (len != 0) ? dx / len : 0;
 	float uy = (len != 0) ? dy / len : 0;
 
-	// ÇĞÏòËÙ¶È
+	// åˆ‡å‘é€Ÿåº¦
 	float stretchFactor = -8.0f;
 	float vx_tan = ux * stretchFactor * stretchSpeed;
 	float vy_tan = uy * stretchFactor * stretchSpeed;
 	float nx = -uy;
 	float ny = ux;
 
-	// È·±£·¨ÏòÁ¿ÏòÍâ
+	// ç¡®ä¿æ³•å‘é‡å‘å¤–
 	float mx = (pStart.x + pEnd.x) / 2.0f;
 	float my = (pStart.y + pEnd.y) / 2.0f;
 	if (mx * nx + my * ny > 0) {
@@ -406,7 +426,7 @@ void Barrage::fiveStar(Enemy& e, int currentStep, int totalSteps, float R_orbit,
 	float ax = nx * currentAcc;
 	float ay = ny * currentAcc;
 
-	// Éú³É×Óµ¯ 
+	// ç”Ÿæˆå­å¼¹ 
 	for (int i = 0; i < starCount; ++i) {
 		float orbitAng = -PI / 2.0f + i * (2.0f * PI / (float)starCount);		
 		float cx = x0 + R_orbit * cos(orbitAng);
@@ -423,12 +443,14 @@ void Barrage::fiveStar(Enemy& e, int currentStep, int totalSteps, float R_orbit,
 		b->groupID = globalGroupID;
 		barrList.push_back(b);
 		Game::Effects.spawn(EffectType::CREATE_BARRAGE, cx + lx, cy + ly);
+	}
+	if (currentStep % 3 == 0) {
 		Game::Audio.play(L"barrage");
 	}
 }
 
 void Barrage::update() {
-	// Í³¼Æ»¹»îÔ¾µÄ×é
+	// ç»Ÿè®¡è¿˜æ´»è·ƒçš„ç»„
 	std::set<int> groupsInside;
 	for (auto* b : barrList) {
 		b->move(); 
@@ -437,7 +459,7 @@ void Barrage::update() {
 			groupsInside.insert(b->groupID);
 		}
 	}
-	// ½âËøÒÑÍêÈ«³ö½çµÄ×é
+	// è§£é”å·²å®Œå…¨å‡ºç•Œçš„ç»„
 	for (auto* b : barrList) {
 		if (b->lock && b->groupID != -1) {
 			if (groupsInside.find(b->groupID) == groupsInside.end()) {
@@ -445,7 +467,7 @@ void Barrage::update() {
 			}
 		}
 	}
-	// É¾³ı
+	// åˆ é™¤
 	for (auto it = barrList.begin(); it != barrList.end(); ) {
 		Barrage* b = *it;
 		if (b->isAlive()) {

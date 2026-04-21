@@ -1,14 +1,14 @@
 #pragma once
+#pragma execution_character_set("utf-8")
 #include "Role.h" 
 
 enum class EffectType {
-	EXPLOSION,      // 敌人爆炸 
-	CLEAR_SMALL,    // 清弹特效 
-	SPELL_CUTIN,    // 符卡立绘 
+	EXPLOSION,      // 鏁屼汉鐖嗙偢 
+	CLEAR_SMALL,    // 娓呭脊鐗规晥 
+	SPELL_CUTIN,    // 绗﹀崱绔嬬粯 
 	SPELL_NAME,
 	CREATE_BARRAGE
 };
-
 
 struct EffectInstance {
 	EffectType type;
@@ -21,7 +21,7 @@ struct EffectInstance {
 	IMAGE* imgPtr;        
 	int srcX, srcY, srcW, srcH;
 	std::vector<POINT> frameOffsets;
-	// 符卡立绘专用
+	// 绗﹀崱绔嬬粯涓撶敤
 	bool isPlayer;
 	bool active;
 	bool isPersistent; 
@@ -31,12 +31,12 @@ struct EffectInstance {
 class EffectManager {
 private:
 	std::vector<EffectInstance> effects;
-	IMAGE imgDeadCircle;  // 敌人死亡
-	IMAGE imgClear;       // 清弹
-	IMAGE imgReimuSpell;  // 自机符卡
-	IMAGE imgSanaeSpell;  // 敌人符卡
+	IMAGE imgDeadCircle;  // 鏁屼汉姝讳骸
+	IMAGE imgClear;       // 娓呭脊
+	IMAGE imgReimuSpell;  // 鑷満绗﹀崱
+	IMAGE imgSanaeSpell;  // 鏁屼汉绗﹀崱
 	IMAGE imgSpellName;
-	IMAGE imgBarrage;      // 弹幕生成特效
+	IMAGE imgBarrage;      // 寮瑰箷鐢熸垚鐗规晥
 	IMAGE imgRibbon;
 	bool loaded;
 

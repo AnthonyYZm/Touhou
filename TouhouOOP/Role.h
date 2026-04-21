@@ -1,24 +1,25 @@
 #pragma once
+#pragma execution_character_set("utf-8")
 #include "Library.h"
 
-// µ¯Ä»ÈÎÎñ½á¹¹Ìå 
+// å¼¹å¹•ä»»åŠ¡ç»“æž„ä½“ 
 struct BarrageTask {
-	int type;            // µ¯Ä»ÀàÐÍ 
-	DWORD lastTime;      // ÉÏÒ»´Î·¢ÉäµÄÊ±¼ä
-	int interval;        // ·¢Éä¼ä¸ô 
-	float speed;         // ËÙ¶È
-	float omega;         // ½ÇËÙ¶È »ò °ë¾¶²ÎÊý
-	int num;             // ÊýÁ¿
-	int r;               // °ë¾¶ (ÓÃÓÚwheelµÈ)
-	int dir;             // ·½Ïò (ÓÃÓÚstraightMillµÈ)
-	int x0, y0;          // ·¢ÉäÎ»ÖÃ
-    float acc;		   	 // ¼ÓËÙ¶È 
-	int burstCount;      // Á¬·¢´ÎÊý 
-	int burstInterval;   // Á¬·¢¼ä¸ô
-	int currentBurst;    // µ±Ç°Á¬·¢¼ÆÊý
-	float currentAngle;  // µ±Ç°½Ç¶È (ÓÃÓÚÐý×ªÀàµ¯Ä»)
-	DWORD lastBurstTime; // ÉÏÒ»·¢Ê±¼ä
-	int style;           // µ¯Ä»ÑùÊ½
+    int type;            // å¼¹å¹•ç±»åž‹ 
+    DWORD lastTime;      // ä¸Šä¸€æ¬¡å‘å°„çš„æ—¶é—´
+    int interval;        // å‘å°„é—´éš” 
+    float speed;         // é€Ÿåº¦
+    float omega;         // è§’é€Ÿåº¦ æˆ– åŠå¾„å‚æ•°
+    int num;             // æ•°é‡
+    int r;               // åŠå¾„ (ç”¨äºŽwheelç­‰)
+    int dir;             // æ–¹å‘ (ç”¨äºŽstraightMillç­‰)
+    int x0, y0;          // å‘å°„ä½ç½®
+    float acc;		   	 // åŠ é€Ÿåº¦ 
+    int burstCount;      // è¿žå‘æ¬¡æ•° 
+    int burstInterval;   // è¿žå‘é—´éš”
+    int currentBurst;    // å½“å‰è¿žå‘è®¡æ•°
+    float currentAngle;  // å½“å‰è§’åº¦ (ç”¨äºŽæ—‹è½¬ç±»å¼¹å¹•)
+    DWORD lastBurstTime; // ä¸Šä¸€å‘æ—¶é—´
+    int style;           // å¼¹å¹•æ ·å¼
 
     BarrageTask(int _type, int _interval, float _speed, float _omega, int _num, int _r = 0, 
         int _dir = 1, int _x = 0, int _y = 0, float _acc = 0.0f, 
@@ -89,13 +90,10 @@ inline void putimagePNG(int x, int y, int srcW, int srcH, IMAGE* srcImg, int sx,
     if (x >= clipRight || y >= clipBottom || x + dstW <= clipLeft || y + dstH <= clipTop) {
         return;
     }
-    // GDI ²Ã¼ô 
     int savedDC = SaveDC(hDC);
 
-    // ÉèÖÃ²Ã¼ôÇøÓò£º¸æËßÏÔ¿¨£¬Ö»ÔÊÐíÔÚ (clipLeft, clipTop) µ½ (clipRight, clipBottom) Ö®¼ä»­Í¼
     IntersectClipRect(hDC, clipLeft, clipTop, clipRight, clipBottom);
 
-    // »æÖÆ (AlphaBlend)
     BLENDFUNCTION bf = { 0 };
     bf.BlendOp = AC_SRC_OVER;
     bf.BlendFlags = 0;
@@ -108,6 +106,5 @@ inline void putimagePNG(int x, int y, int srcW, int srcH, IMAGE* srcImg, int sx,
         bf
     );
 
-    // »Ö¸´×´Ì¬
     RestoreDC(hDC, savedDC);
 }

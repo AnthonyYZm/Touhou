@@ -1,3 +1,4 @@
+#pragma execution_character_set("utf-8")
 #include "Item.h"
 #include "Hero.h" 
 
@@ -10,7 +11,7 @@ Item::Item(float _x, float _y) : Role(_x, _y) {
 		resLoaded = true;
 	}
 	vx = 0;
-	vy = -3.0f; // 初始向上弹起
+	vy = -3.0f;
 	magnet = false;
 	alive = true;
 }
@@ -27,9 +28,8 @@ void Item::move() {
 	if (magnet) {
 	}
 	else {
-		// 模拟抛物线
 		vy += 0.1f; 
-		if (vy > 3.0f) vy = 3.0f; // 最大下落速度
+		if (vy > 3.0f) vy = 3.0f; 
 		y += vy;
 	}
 

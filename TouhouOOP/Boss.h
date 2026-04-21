@@ -1,13 +1,14 @@
 #pragma once
+#pragma execution_character_set("utf-8")
 #include "Enemy.h"
 #include <vector>
 
-// Boss µÄ½×¶ÎÅäÖÃ
+// Boss çš„é˜¶æ®µé…ç½®
 struct BossPhase {
-    int duration;           // ³ÖĞøºÁÃë
-    MoveStrategy moveLogic; // ¸Ã½×¶ÎÔõÃ´¶¯
-    std::vector<BarrageTask> tasks; // ¸Ã½×¶Îµ¯Ä»
-    int spellID; 
+    int duration;           // æŒç»­æ¯«ç§’
+    MoveStrategy moveLogic; // è¯¥é˜¶æ®µæ€ä¹ˆåŠ¨
+    std::vector<BarrageTask> tasks; // è¯¥é˜¶æ®µå¼¹å¹•
+    int spellID;
     bool isSpellCard;
     int phaseHp;
     int waitTime;

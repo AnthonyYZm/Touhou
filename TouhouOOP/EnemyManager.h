@@ -1,4 +1,5 @@
 #pragma once
+#pragma execution_character_set("utf-8")
 #include "Enemy.h"
 #include "Bullet.h"
 #include "Boss.h"       
@@ -9,23 +10,22 @@
 #include <list>
 
 struct SpawnEvent {
-	int startTime = 0;        // ²¨´Î¿ªÊ¼ºóµÄÑÓ³Ù
-	int count = 0;            // Éú³ÉÊıÁ¿
-	int interval = 0;         // Éú³É¼ä¸ô
-	int hp = 0;               // ÉúÃüÖµ
-	eType type;           // µĞÈËÍâ¹ÛÀàĞÍ
-	float startX = 0, startY = 0; // ÆğÊ¼Î»ÖÃ
-	MoveStrategy moveLogic; // ÒÆ¶¯²ßÂÔ
-	std::vector<BarrageTask> initTasks; // ³õÊ¼Ğ¯´øµÄµ¯Ä»ÈÎÎñ
+	int startTime = 0;        // æ³¢æ¬¡å¼€å§‹åçš„å»¶è¿Ÿ
+	int count = 0;            // ç”Ÿæˆæ•°é‡
+	int interval = 0;         // ç”Ÿæˆé—´éš”
+	int hp = 0;               // ç”Ÿå‘½å€¼
+	eType type;           // æ•Œäººå¤–è§‚ç±»å‹
+	float startX = 0, startY = 0; // èµ·å§‹ä½ç½®
+	MoveStrategy moveLogic; // ç§»åŠ¨ç­–ç•¥
+	std::vector<BarrageTask> initTasks; // åˆå§‹æºå¸¦çš„å¼¹å¹•ä»»åŠ¡
 
 	Boss* bossInstance = nullptr;
-	int spawnedCount = 0; 
+	int spawnedCount = 0;
 	DWORD lastSpawnTime = 0;
-
 };
 
 struct waveData {
-	int waveDelay = 0; // ÔÚ¿ªÊ¼ÕâÒ»²¨Ö®Ç°£¬ĞèÒªµÈ´ı¶à¾Ã
+	int waveDelay = 0; // åœ¨å¼€å§‹è¿™ä¸€æ³¢ä¹‹å‰ï¼Œéœ€è¦ç­‰å¾…å¤šä¹…
 	std::vector<SpawnEvent> events;
 };
 

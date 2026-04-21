@@ -1,5 +1,9 @@
-﻿#include "Game.h"
-#include "Library.h"
+#include "Game.h"
+#include <chrono>
+#include <thread>
+#include <mmsystem.h>
+#include <iostream>
+#pragma comment(lib, "winmm.lib")
 
 
 int Game::bulletLevel = 1;
@@ -8,55 +12,116 @@ EffectManager Game::Effects;
 BackgroundManager Game::BG;
 
 Game::Game() {
-	initgraph(screenWidth, screenHeight);
-	adjustWindow();
+
+	SetConsoleOutputCP(CP_UTF8);
+
 	enemyFire = false;
-	wait = false;	
+	wait = false;
 	bulletLevel = 1;
-	InitLevels();
+	InitNormalLevels();    
+	InitAILevel();
 	isSpellActive = false;
 	spellAngle = 0.0f;
-	spellRadius = 10.0f;	
+	spellRadius = 10.0f;
 	Audio.init();
 	Effects.init();
 	BG.init();
-	
+
+	// 初始化状态为主菜单
+	currentState = GameState::MAIN_MENU;
+
+	// 初始化 AI 控制器为空指针
+	aiController = nullptr;
 }
 
 
 Game::~Game() {
 	ClearSpellBarrages();
+
+	// 清理 AI 控制器
+	if (aiController) {
+		delete aiController;
+		aiController = nullptr;
+	}
+
+	if (aiProcessHandle != NULL) {
+		TerminateProcess(aiProcessHandle, 0);
+		CloseHandle(aiProcessHandle);
+		aiProcessHandle = NULL;
+	}
 }
 
 void Game::Touhou() {
 	initgraph(screenWidth, screenHeight);
+	adjustWindow();
 	setbkcolor(WHITE);
 	BeginBatchDraw();
 
-	const int FPS = 60;
-	const int FRAME_WAIT = 1000 / FPS;
+	// 创建离屏缓冲区（固定游戏分辨率）
+	HDC easxDC = GetImageHDC();
+	offDC  = CreateCompatibleDC(easxDC);
+	offBmp = CreateCompatibleBitmap(easxDC, screenWidth, screenHeight);
+	offOld = (HBITMAP)SelectObject(offDC, offBmp);
 
+	using clock = std::chrono::high_resolution_clock;
+	constexpr auto TARGET_FRAME_TIME = std::chrono::microseconds(1000000 / 60);
+	constexpr auto SLEEP_THRESHOLD = std::chrono::microseconds(2000);
+
+	timeBeginPeriod(1);
 	while (IsWindow(GetHWnd())) {
-		DWORD startTime = GetTickCount();
+		const auto frameStart = clock::now();
 		cleardevice();
-		BG.update();
-		BG.draw();
-		//Game logic
-		HandleRound();
-		Effects.update();
-		Effects.draw();
-		HeroControl();
-		Bullets();
-		drawUI();
-		
+
+		// 根据当前状态执行不同逻辑
+		switch (currentState) {
+		case GameState::MAIN_MENU:
+			HandleMenuInput();
+			DrawMainMenu();
+			break;
+
+		case GameState::NORMAL_PLAY:
+			BG.update();
+			BG.draw();
+			HandleRound();
+			Effects.update();
+			Effects.draw();
+			HeroControl();
+			Bullets();
+			drawUI();
+			break;
+
+		case GameState::AI_DEMO:
+			HandleAIDemo();
+			break;
+		}
+
+		// 先把 EasyX 批绘制内容刷到 EasyX 内部 DC，再缩放输出到窗口
 		FlushBatchDraw();
 
-		DWORD endTime = GetTickCount();
-		DWORD frameTime = endTime - startTime; 
-		if (frameTime < FRAME_WAIT) {
-			Sleep(FRAME_WAIT - frameTime);
+		while (true) {
+			const auto now = clock::now();
+			const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(now - frameStart);
+			const auto remain = TARGET_FRAME_TIME - elapsed;
+			if (remain <= std::chrono::microseconds(0)) break;
+			if (remain > SLEEP_THRESHOLD) {
+				Sleep(1);
+			}
+			else {
+				break;
+			}
+		}
+
+		while (std::chrono::duration_cast<std::chrono::microseconds>(clock::now() - frameStart) < TARGET_FRAME_TIME) {
+			std::this_thread::yield();
 		}
 	}
+	timeEndPeriod(1);
+
+	// 释放离屏缓冲区
+	SelectObject(offDC, offOld);
+	DeleteObject(offBmp);
+	DeleteDC(offDC);
+	offDC = nullptr; offBmp = nullptr; offOld = nullptr;
 
 	EndBatchDraw();
 	closegraph();
@@ -94,6 +159,7 @@ void Game::HandleRound() {
 void Game::handleBGM() {
 	bool isBossAlive = false;
 	for (auto* e : E.getList()) {
+		if (e == nullptr) continue;
 		if (e->type == eType::boss && e->isAlive()) {
 			isBossAlive = true;
 			break;
@@ -104,10 +170,11 @@ void Game::handleBGM() {
 	}
 	else {
 		Game::Audio.playBGM(L"bgm_stage1");
+
 	}
 }
 
-void Game::InitLevels() {
+void Game::InitNormalLevels() {
 
 	{
 		// 第一波
@@ -404,6 +471,202 @@ void Game::InitLevels() {
 	}
 }
 
+void Game::InitAILevel() {
+	{
+		waveData wBoss;
+		wBoss.waveDelay = 2000;
+
+		SpawnEvent boss;
+		boss.startTime = 500;
+		boss.count = 1;
+		boss.interval = 0;
+		boss.type = eType::boss;
+
+		Boss* sanae = new Boss(LeftEdge, TopEdge);
+		sanae->type = eType::boss;
+
+		sanae->onEvent = [&](float x, float y, int id) {
+			if (id == 1) { // 符卡展开
+				Game::Audio.play(L"spell");
+				Game::Effects.spawn(EffectType::SPELL_CUTIN, 0, 0, false);
+				Game::Effects.spawn(EffectType::SPELL_NAME, 0, 0, false);
+				Game::BG.setMode(BGMode::BOSS_SPELL);
+				Game::Barr.clearBarrage();
+			}
+			else if (id == 2) { // 阶段击破
+				Game::Audio.play(L"damage");
+				Game::Effects.spawn(EffectType::EXPLOSION, x, y);
+				Game::BG.setMode(BGMode::NORMAL);
+				EnemyManager::DropReq req = { x, y, 10 };
+				Game::E.dropQueue.push_back(req);
+				Game::Effects.clearSpellName();
+				Game::Barr.clearBarrage();
+			}
+			};
+		// phase1
+		{
+			BossPhase p1(
+				600,     // 血量
+				30000,   // 限时 30秒
+				Moves::bossEnter(80.0f), // 移动逻辑：飞到 Y=100 处悬停
+				false,
+				1,
+				2000
+			);
+			// phase1
+			//omega = 1.618 * 
+			p1.tasks.push_back(BarrageTask(
+				(int)bType::star_fall,
+				5000,     // interval 发射间隔 (越小线条越密集)                     
+				0.3f,     // speed 拉伸速度，控制线段变长的快慢                
+				162.0f,   // omega 大圆半径，5个星星离Boss多远                  
+				5,		  // num 5个星星                 
+				1500,     // r 悬停时间 1500ms                   
+				1,        // dir (未使用)                 
+				100,      // x0 星星半径，控制五角星大小                   
+				0,        // y0 (未使用)                  
+				0.02f,    // acc 抛射加速度，控制星星炸开的力度，0.1~0.2 之间效果最好                   
+				40,       // burstCount 总共画100笔，越多越细腻                 
+				15,       // burstInterval 每笔间隔10ms，作画总耗时 1秒
+				(int)BulletStyle::BLUE_
+			));
+			sanae->addPhase(p1);
+		}
+
+		// phase2
+		{
+			BossPhase p2(
+				600,
+				45000,
+				Moves::Stay(),
+				true,
+				1000
+			);
+			int left = CentralX - 200;
+			int right = CentralX + 200;
+			p2.tasks.push_back(BarrageTask((int)bType::windmill_st, 40, 3.0f, 20.3f, 1, 0, 1, left,
+				0, 0, 0, 0, (int)BulletStyle::RICE_BULE));
+			p2.tasks.push_back(BarrageTask((int)bType::windmill_st, 40, 3.0f, 20.3f, 1, 0, 0, right,
+				0, 0, 0, 0, (int)BulletStyle::RICE_BULE));
+			p2.tasks.push_back(BarrageTask((int)bType::pincer_aim, 800, 4.0f, 0, 1,
+				150, 1, 0, 0, 0, 1, 0, (int)BulletStyle::RED_));
+			sanae->addPhase(p2);
+		}
+
+		// phase3
+		BossPhase p3(
+			600,
+			45000,
+			Moves::StepLeftUp(3000, 200, 5, 5),
+			false,
+			0
+		);
+		p3.tasks.push_back(BarrageTask(
+			(int)bType::windmill_switching,
+			100,             // interval 发射间隔 (越小线条越密集)
+			3.0f,           // speed 子弹飞行速度
+			8.0f,           // omega 旋转角速度 (每发旋转4度)
+			8,              // num 几条旋臂 
+			200,              // 停顿
+			1,              // dir 初始方向 (1:顺时针)
+			0, 0,           // x0, y0
+			0,              // burstCount (未使用)
+			0,        // burstCount (unused)
+			1000,      // burstInterval (switch time, 3000ms)
+			(int)BulletStyle::RICE_BULE
+		));
+		p3.tasks.push_back(BarrageTask(
+			(int)bType::windmill_switching,
+			100,             // interval 发射间隔 
+			3.0f,           // speed 子弹飞行速度
+			8.0f,           // omega 旋转角速度 
+			8,              // num 几条旋臂 
+			200,              // 停顿
+			-1,              // dir 初始方向 
+			0, 0,           // x0, y0
+			0,              // burstCount (未使用)
+			0,              // burstCount (unused)
+			1000,      // burstInterval 
+			(int)BulletStyle::RICE_RED
+		));
+		sanae->addPhase(p3);
+		// phase4
+		{
+			BossPhase p4(
+				600,
+				45000,
+				Moves::MoveTo(CentralX, CentralY, 80.0f),
+				true
+			);
+
+			p4.tasks.push_back(BarrageTask((int)bType::firework, 500, 3.0f, 0, 24, 0, 0, 0, 0, 0, 0, 0, (int)BulletStyle::RICE_BULE));
+			p4.tasks.push_back(BarrageTask((int)bType::pincer_aim, 800, 4.0f, 0, 2,
+				150, 1, 0, 0, 0.5f, 1, 80));
+			sanae->addPhase(p4);
+		}
+
+		// phase5
+		{
+			BossPhase p5(
+				600,
+				60000,
+				Moves::Stay(),
+				false,
+				1000
+			);
+			p5.tasks.push_back(BarrageTask(
+				(int)bType::star_fall,
+				5000,
+				0.5,
+				370.0f,
+				12,
+				1500,
+				1,
+				100,
+				0,
+				0.02f,
+				40,
+				15,
+				(int)BulletStyle::RED_
+			));
+			p5.tasks.push_back(BarrageTask(
+				(int)bType::star_fall,
+				5000,     // interval 发射间隔 (越小线条越密集)                     
+				0.3f,     // speed 拉伸速度，控制线段变长的快慢                
+				162.0f,   // omega 大圆半径，5个星星离Boss多远                  
+				5,		  // num 5个星星                 
+				3000,     // r 悬停时间 3000ms                   
+				1,        // dir (未使用)                 
+				100,      // x0 星星半径，控制五角星大小                   
+				0,        // y0 (未使用)                  
+				0.02f,    // acc 抛射加速度，控制星星炸开的力度，0.1~0.2 之间效果最好                   
+				40,       // burstCount 总共画100笔，越多越细腻                 
+				15,       // burstInterval 每笔间隔10ms，作画总耗时 1秒
+				(int)BulletStyle::BLUE_
+			));
+			sanae->addPhase(p5);
+		}
+
+		// phase6
+		{
+			BossPhase p6(
+				800,
+				45000,
+				Moves::MoveTo(CentralX, CentralY, 80.0f),
+				true,
+				1000
+			);
+			//p6.tasks.push_back(BarrageTask((int)bType::firework, 800, 1.5f, 0, 15, 0, 0, 0, 0, 0, 0, 0, (int)BulletStyle::BLUE_BIG));
+			p6.tasks.push_back(BarrageTask((int)bType::windmill, 350, 1.5f, 8, 6, 0, 0, 0, 0, 0, 1, 0, (int)BulletStyle::BLUE_BIG));
+			p6.tasks.push_back(BarrageTask((int)bType::windmill_st, 100, 3.0f, 15, 12));
+			sanae->addPhase(p6);
+		}
+		boss.bossInstance = sanae;
+		wBoss.events.push_back(boss);
+		waveQueue.push(wBoss);
+	}
+}
+
 void Game::HeroControl() {
 	Hero.draw();
 	Hero.move();
@@ -423,8 +686,14 @@ void Game::HeroControl() {
 }
 
 void Game::Bullets() {
+
 	if (GetAsyncKeyState('Z') & 0x8000) {
 		B.setFire(true);	
+	}
+
+	// AI 开火
+	if (Hero.fire) {
+		B.setFire(true);
 	}
 	B.createBullet(&Hero, bulletLevel, E.getList());
 }
@@ -709,7 +978,7 @@ void Game::CheckCollision() {
 			// 弹幕判定半径 
 			float barrCx = b->x;
 			float barrCy = b->y;
-			float bR = b->getWidth() / 2; 
+			float bR = (float)b->getWidth() / 2; 
 			float barrR = 0;
 			if (b->getStyle() == BulletStyle::RICE_BULE || b->getStyle() == BulletStyle::RICE_RED) barrR = bR;
 			else barrR = bR - 4;
@@ -728,11 +997,12 @@ void Game::CheckCollision() {
 		float heroR = (float)Hero.JudgeR;
 
 		for (auto* e : E.getList()) {
+			if (e == nullptr) continue;
 			if (!e->isAlive()) continue;
 
 			float eCx = e->x;
 			float eCy = e->y;
-			float eR = (float)min(e->width, e->height) / 3; 
+			float eR = (float)std::min(e->width, e->height) / 3; 
 
 			if (checkCircleCollide(Hero.x, Hero.y, heroR, eCx, eCy, eR)) {
 				Hero.hit();
@@ -789,8 +1059,9 @@ void Game::CheckCollision() {
 void Game::updateBoss() {
 	Boss* boss = nullptr;
 	for (auto* e : E.getList()) {
+		if (e == nullptr) continue;
 		if (e->type == eType::boss) {
-			boss = (Boss*)e; 
+			boss = static_cast<Boss*>(e);
 			break;
 		}
 	}
@@ -800,6 +1071,8 @@ void Game::updateBoss() {
 		}
 		return;
 	}
+	HWND hwnd = GetHWnd();
+	if (hwnd == nullptr || !IsWindow(hwnd)) return;
 	if (boss->y < 0) return;
 	// UI 绘制部分
 	int currentHp = boss->hp;
@@ -912,6 +1185,7 @@ void Game::DrawDebug() {
 
 	// 绘制敌人中心和判定圈
 	for (auto* e : E.getList()) {
+		if (e == nullptr) continue;
 		if (!e->isAlive()) continue;
 		setlinecolor(RED);
 		setlinestyle(PS_SOLID, 1);
@@ -967,7 +1241,257 @@ void Game::drawUI() {
 }
 
 
-
-
-
 	
+// 主菜单相关方法 
+
+void Game::DrawMainMenu() {
+	BG.drawBackdropOnly();
+
+	// 绘制标题
+	/**/
+
+	// 按钮参数
+	const int btnWidth = 200;
+	const int btnHeight = 50;
+	const int btnX = (screenWidth - btnWidth) / 2;
+	const int btn1Y = 300;
+	const int btn2Y = 380;
+
+	int mouseX = menuCursorX;
+	int mouseY = menuCursorY;
+
+	// 绘制按钮1：普通模式
+	bool hover1 = (mouseX >= btnX && mouseX <= btnX + btnWidth &&
+		mouseY >= btn1Y && mouseY <= btn1Y + btnHeight);
+	setfillcolor(hover1 ? RGB(100, 150, 255) : RGB(50, 100, 200));
+	solidrectangle(btnX, btn1Y, btnX + btnWidth, btn1Y + btnHeight);
+	setlinecolor(WHITE);
+	rectangle(btnX, btn1Y, btnX + btnWidth, btn1Y + btnHeight);
+
+	settextstyle(30, 0, L"微软雅黑", 0, 0, FW_NORMAL, false, false, false);
+	settextcolor(WHITE);
+	wchar_t btn1Text[] = L"普通模式";
+	int btn1TextWidth = textwidth(btn1Text);
+	outtextxy(btnX + (btnWidth - btn1TextWidth) / 2, btn1Y + 10, btn1Text);
+
+	setbkmode(TRANSPARENT);
+
+	// 绘制按钮2：AI演示
+	bool hover2 = (mouseX >= btnX && mouseX <= btnX + btnWidth &&
+		mouseY >= btn2Y && mouseY <= btn2Y + btnHeight);
+	setfillcolor(hover2 ? RGB(100, 200, 100) : RGB(50, 150, 50));
+	solidrectangle(btnX, btn2Y, btnX + btnWidth, btn2Y + btnHeight);
+	setlinecolor(WHITE);
+	rectangle(btnX, btn2Y, btnX + btnWidth, btn2Y + btnHeight);
+
+	settextcolor(WHITE);
+	wchar_t btn2Text[] = L"AI 演示";
+	int btn2TextWidth = textwidth(btn2Text);
+	outtextxy(btnX + (btnWidth - btn2TextWidth) / 2, btn2Y + 10, btn2Text);
+}
+
+void Game::HandleMenuInput() {
+	// 按钮参数（与DrawMainMenu保持一致）
+	const int btnWidth = 200;
+	const int btnHeight = 50;
+	const int btnX = (screenWidth - btnWidth) / 2;
+	const int btn1Y = 300;
+	const int btn2Y = 380;
+
+	ExMessage msg;
+	while (peekmessage(&msg, EM_MOUSE)) {
+		menuCursorX = msg.x;
+		menuCursorY = msg.y;
+		if (msg.message != WM_LBUTTONDOWN) {
+			continue;
+		}
+		int mouseX = msg.x;
+		int mouseY = msg.y;
+
+		if (mouseX >= btnX && mouseX <= btnX + btnWidth &&
+			mouseY >= btn1Y && mouseY <= btn1Y + btnHeight) {
+			InitNormalPlay();
+			currentState = GameState::NORMAL_PLAY;
+			return;
+		}
+
+		if (mouseX >= btnX && mouseX <= btnX + btnWidth &&
+			mouseY >= btn2Y && mouseY <= btn2Y + btnHeight) {
+			InitAIDemo();
+			currentState = GameState::AI_DEMO;
+			return;
+		}
+	}
+}
+
+void Game::InitNormalPlay() {
+	// 清空敌人
+	E.clearEnemy();
+	// 清空子弹列表
+	for (auto* bullet : B.bulletList) {
+		delete bullet;
+	}
+	B.bulletList.clear();
+	// 清空弹幕
+	Barr.clearBarrage();
+	// 清空道具
+	for (auto* item : items) {
+		delete item;
+	}
+	items.clear();
+	// 清空符卡弹幕
+	ClearSpellBarrages();
+	// 重置关卡队列
+	while (!waveQueue.empty()) {
+		waveQueue.pop();
+	}
+	currentWave.clear();
+	InitNormalLevels();
+	// 重置其他状态
+	enemyFire = false;
+	wait = false;
+	isSpellActive = false;
+	bulletLevel = 1;
+	// 重新初始化背景和音效
+	BG.init();
+	Effects.init();
+}
+
+void Game::InitAIDemo() {
+	// AI模式初始化：清空所有游戏对象
+	E.clearEnemy();
+	// 清空子弹列表
+	for (auto* bullet : B.bulletList) {
+		delete bullet;
+	}
+	B.bulletList.clear();
+	// 清空弹幕
+	Barr.clearBarrage();
+	// 清空道具
+	for (auto* item : items) {
+		delete item;
+	}
+	items.clear();
+	// 清空符卡弹幕
+	ClearSpellBarrages();
+	// 清空关卡队列
+	while (!waveQueue.empty()) {
+		waveQueue.pop();
+	}
+	currentWave.clear();
+	InitAILevel();
+	// 重置状态
+	enemyFire = false;
+	wait = false;
+	isSpellActive = false;
+	// 初始化背景
+	BG.init();
+	if (aiProcessHandle == NULL) {
+		STARTUPINFOA si;
+		PROCESS_INFORMATION pi;
+		ZeroMemory(&si, sizeof(si));
+		si.cb = sizeof(si);
+		ZeroMemory(&pi, sizeof(pi));
+
+		// 启动 python ai_server.py 
+		char cmd[] = "python ai_server.py";
+
+		// CREATE_NEW_CONSOLE 会弹出一个新的控制台黑框显示 AI 日志
+		// 如果你以后不想看黑框了，可以把 CREATE_NEW_CONSOLE 换成 CREATE_NO_WINDOW
+		if (CreateProcessA(NULL, cmd, NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
+			aiProcessHandle = pi.hProcess; // 保存进程句柄，以后用来关掉它
+			CloseHandle(pi.hThread);
+			std::cout << "[Game] 已自动启动 Python AI 服务器" << std::endl;
+
+			// 给 Python 留出 1 秒钟的启动时间，防止 C++ 发包过快导致 10054 报错
+			Sleep(1000);
+		}
+		else {
+			std::cerr << "[Game] 启动 Python 服务器失败！" << std::endl;
+		}
+	}
+	// 创建并初始化 AI 控制器
+	if (!aiController) {
+		aiController = new AIController();
+	}
+	// 初始化网络（监听端口 9090）
+	if (!aiController->Init(9090)) {
+		std::cerr << "[Game] AI 控制器初始化失败！" << std::endl;
+	}
+	// 设置避障参数（危险半径 80 像素，斥力权重 0.8，意图权重 0.2）
+	aiController->SetAvoidanceParams(80.0f, 0.8f, 0.2f);
+	std::cout << "[Game] AI 演示模式初始化完成" << std::endl;
+}
+
+void Game::HandleAIDemo() {
+	// 绘制背景
+	BG.update();
+	BG.draw();
+
+	// 与普通模式保持一致：沿用同一套刷怪/弹幕/碰撞/Boss 逻辑
+	HandleRound();
+
+	// 1手动接管无敌时间的解除(因为 AI 模式没有调用 Hero.move())
+		if (Hero.invincible && GetTickCount() > Hero.invincibleEnd) {
+			Hero.invincible = false;
+		}
+
+	// 如果 AI 把残机用光了，强制拉起，保证它可以永远演示下去
+	if (!Hero.isAlive()) {
+		Hero.alive = true;
+	}
+
+	// AI 控制自机移动（混合避障）
+	if (aiController) {
+		aiController->UpdateHeroControl(Hero, Barr.barrList);
+	}
+
+	// 绘制自机
+	Hero.draw();
+
+	// 自机子弹逻辑
+	Bullets();
+
+	// 更新特效
+	Effects.update();
+	Effects.draw();
+
+	// 每隔一定帧数发送游戏状态到 Python
+	static int frameCounter = 0;
+	frameCounter++;
+	if (frameCounter >= 10 && aiController) {  // 每 10 帧发送一次（约 6 次/秒）
+		aiController->SendGameState(Hero, E.getList(), Barr.barrList);
+		frameCounter = 0;
+	}
+
+	// 在左上角显示提示文字
+	settextstyle(30, 0, L"微软雅黑", 0, 0, FW_BOLD, false, false, false);
+	settextcolor(YELLOW);
+	setbkmode(TRANSPARENT);
+	outtextxy(50, 50, L"AI Demo Mode Running...");
+
+	// 提示：按ESC返回主菜单
+	settextstyle(20, 0, L"微软雅黑", 0, 0, FW_NORMAL, false, false, false);
+	settextcolor(WHITE);
+	outtextxy(50, 100, L"按 ESC 返回主菜单");
+
+	// 检测ESC键返回主菜单
+	if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
+		// 清理 AI 控制器
+		if (aiController) {
+			aiController->Close();
+			delete aiController;
+			aiController = nullptr;
+		}
+
+		if (aiProcessHandle != NULL) {
+			TerminateProcess(aiProcessHandle, 0); // 强制结束进程
+			CloseHandle(aiProcessHandle);
+			aiProcessHandle = NULL;
+			std::cout << "[Game] 已自动关闭 Python AI 服务器" << std::endl;
+		}
+
+		currentState = GameState::MAIN_MENU;
+		Sleep(200); 
+	}
+}

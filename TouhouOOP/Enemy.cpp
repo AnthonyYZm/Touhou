@@ -1,3 +1,4 @@
+#pragma execution_character_set("utf-8")
 #include "Enemy.h"
 
 int const Enemy::normalWidth = 32;
@@ -69,13 +70,12 @@ void Enemy::draw() {
 
     if (!alive) return;
 
-    // Ä§·¨Õó
+    // é­”æ³•é˜µ
     if (this->type == eType::boss) {
         spellAngle += 6.0f;
         if (spellAngle >= 360.0f) spellAngle -= 360.0f;
         HDC hDC = GetImageHDC(NULL);
-        int savedDC = SaveDC(hDC); // ±£´æµ±Ç°×´Ì¬
-        // ¿ªÆô¸ß¼¶»æÍ¼Ä£Ê½ (ÔÊĞíĞı×ª)
+        int savedDC = SaveDC(hDC); 
         SetGraphicsMode(hDC, GM_ADVANCED);
 
         XFORM xForm;
@@ -83,12 +83,12 @@ void Enemy::draw() {
         float cosA = cos(rad);
         float sinA = sin(rad);
         float scale = 3.0f;
-        // Ğı×ª¾ØÕó
+        // æ—‹è½¬çŸ©é˜µ
         xForm.eM11 = cosA * scale;
         xForm.eM12 = sinA * scale;
         xForm.eM21 = -sinA * scale;
         xForm.eM22 = cosA * scale;
-        // Æ½ÒÆ¾ØÕó 
+        // å¹³ç§»çŸ©é˜µ 
         xForm.eDx = (float)x;
         xForm.eDy = (float)y;
         SetWorldTransform(hDC, &xForm);
@@ -96,9 +96,9 @@ void Enemy::draw() {
         BLENDFUNCTION bf = { AC_SRC_OVER, 0, 128, AC_SRC_ALPHA };
 
         AlphaBlend(hDC,
-            -64, -64, 128, 128,   // Ä¿±êÎ»ÖÃ (Ïà¶ÔÓÚĞı×ªÖĞĞÄ)
+            -64, -64, 128, 128,   // ç›®æ ‡ä½ç½® (ç›¸å¯¹äºæ—‹è½¬ä¸­å¿ƒ)
             hSrc,
-            0, 0, 128, 128,       // Ô´Í¼Æ¬ÇøÓò
+            0, 0, 128, 128,       // æºå›¾ç‰‡åŒºåŸŸ
             bf
         );
         RestoreDC(hDC, savedDC);
@@ -107,7 +107,7 @@ void Enemy::draw() {
     te2 = GetTickCount();
     IMAGE* currentImg = &img; 
 
-    // È·¶¨Í¼Ô´ºÍ¼ô²Ã×ø±ê (sx, sy)
+    // ç¡®å®šå›¾æºå’Œå‰ªè£åæ ‡ (sx, sy)
     if (type == eType::boss) {
         currentImg = &sanae;
 		texWidth = bossWidth;

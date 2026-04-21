@@ -2,6 +2,14 @@
 .vs/
 .vscode/
 
+# 忽略敏感配置文件
+.env
+
+# 忽略 Python 虚拟环境
+venv/
+__pycache__/
+*.pyc
+
 # 忽略编译输出目录
 x64/
 Debug/

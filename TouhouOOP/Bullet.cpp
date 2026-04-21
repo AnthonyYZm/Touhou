@@ -1,3 +1,4 @@
+#pragma execution_character_set("utf-8")
 #include "Bullet.h"
 #include "Enemy.h"
 
@@ -65,16 +66,15 @@ void Bullet::createBullet(Hero* hero, int type, const std::vector<Enemy*>& enemi
             float offset = 3;
             float hx = hero->x - offset;
             float hy = hero->y - 10.0f - offsetDistance - offset;
-            // µ±Ç°»ğÁ¦
             int p = hero->getPower();
-            // ³õÊ¼×´Ì¬ (1·¢)
-            if (p < 30) {
+            // å•å‘
+            if (p > 30) {
                 Bullet* b = new Bullet(hx, hy);
                 b->setVelocity(0, -b->speed);
                 b->alive = true;
                 bulletList.push_back(b);
             }
-            // Ë«·¢ 
+            // åŒå‘
             else if (p >= 30 && p < 50) {
                 Bullet* b1 = new Bullet(hx - 8, hy);
                 Bullet* b2 = new Bullet(hx + 8, hy);
@@ -84,7 +84,7 @@ void Bullet::createBullet(Hero* hero, int type, const std::vector<Enemy*>& enemi
                 bulletList.push_back(b1);
                 bulletList.push_back(b2);
             }
-            // Èı·¢É¢Éä
+            // ä¸‰å‘
             else {
                 Bullet* center1 = new Bullet(hx - 8, hy);
                 Bullet* center2 = new Bullet(hx + 8, hy);
@@ -94,10 +94,10 @@ void Bullet::createBullet(Hero* hero, int type, const std::vector<Enemy*>& enemi
                 bulletList.push_back(center1);
                 bulletList.push_back(center2);
 
-                // ¼ÆËã×Óµ¯µÄÄ¿±ê
+                // è®¡ç®—å­å¼¹çš„ç›®æ ‡
                 Enemy* target = nullptr;
                 float minDistSq = 100000000.0f; 
-                // Ñ°ÕÒ×î½üµÄ´æ»îµĞÈË
+                // å¯»æ‰¾æœ€è¿‘çš„å­˜æ´»æ•Œäºº
                 for (auto* e : enemies) {
                     if (!e->isAlive()) continue;
                     float dx = e->x - hx;
@@ -121,7 +121,7 @@ void Bullet::createBullet(Hero* hero, int type, const std::vector<Enemy*>& enemi
 					rightB->bulletType = 1;
                 }
                 else {
-                    // ÎŞÄ¿±êÄ£Ê½ (Ğ±Ïò·¢Éä)
+                    // æ— ç›®æ ‡æ¨¡å¼ (æ–œå‘å‘å°„)
                     float offsetAngle = 20.0f * (PI / 180.0f);
                     float baseAngle = -PI / 2.0f;
                     float angleL = baseAngle - offsetAngle;

@@ -1,4 +1,5 @@
 #pragma once
+#pragma execution_character_set("utf-8")
 #include "Role.h"
 #include "Bullet.h"
 #include <map>
@@ -12,7 +13,7 @@ enum class eType : int {
 
 class Enemy;	
 
-// ¶¨ÒåÒÆ¶¯²ßÂÔº¯ÊıÇ©Ãû£º½ÓÊÕ ×ÔÉíÖ¸Õë ºÍ ´æ»îÊ±¼ä(ms)
+// å®šä¹‰ç§»åŠ¨ç­–ç•¥å‡½æ•°ç­¾åï¼šæ¥æ”¶ è‡ªèº«æŒ‡é’ˆ å’Œ å­˜æ´»æ—¶é—´(ms)
 using MoveStrategy = std::function<void(Enemy*, int)>;
 
 class Enemy : public Role {

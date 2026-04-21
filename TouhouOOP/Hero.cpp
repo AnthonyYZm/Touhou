@@ -20,7 +20,7 @@ Hero::Hero(float _x, float _y) : Role(_x, _y, 1) {
 	score = 0;
 	invincible = false;
 	invincibleEnd = 0;
-	bombCount = 5;
+	bombCount = 3;
 	maxBomb = 5;
 }
 
@@ -91,14 +91,13 @@ void Hero::hit() {
 	if (invincible) return; 
 	lives--;
 
-	if (lives >= 0) {
-		x = (LeftEdge + WIDTH) / 2.0f;
-		y = TopEdge + HEIGHT - 100.0f;
-		invincible = true;
-		invincibleEnd = GetTickCount() + 3000;
-	}
-	else {
-		// Game Over 
+	x = (LeftEdge + WIDTH) / 2.0f;
+	y = TopEdge + HEIGHT - 100.0f;
+	invincible = true;
+	invincibleEnd = GetTickCount() + 3000;
+
+	// 如果残机耗尽，标记为死亡
+	if (lives < 0) {
 		alive = false;
 	}
 }

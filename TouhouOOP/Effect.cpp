@@ -1,3 +1,4 @@
+#pragma execution_character_set("utf-8")
 #include "Effect.h"
 
 EffectManager::EffectManager() { loaded = false; }
@@ -27,7 +28,7 @@ void EffectManager::spawn(EffectType type, float x, float y, bool isPlayer) {
 	switch (type) {
 	case EffectType::EXPLOSION:
 		eff.imgPtr = &imgDeadCircle;
-		eff.totalFrames = 15; // ¶¯»­³ÖĞøÖ¡Êı (Ô¼300ms)
+		eff.totalFrames = 15; // åŠ¨ç”»æŒç»­å¸§æ•° (çº¦300ms)
 		eff.frameInterval = 0; 
 		// (x=0,y=64,width=64,height=64)
 		eff.srcX = 64; eff.srcY = 0; eff.srcW = 64; eff.srcH = 64;
@@ -36,7 +37,7 @@ void EffectManager::spawn(EffectType type, float x, float y, bool isPlayer) {
 	case EffectType::CLEAR_SMALL:
 		eff.imgPtr = &imgClear;
 		eff.totalFrames = 3;
-		eff.frameInterval = 50; // Ã¿Ö¡ 50ms
+		eff.frameInterval = 50; // æ¯å¸§ 50ms
 		// (65,224), (97,224), (158,224)
 		eff.srcW = 30; eff.srcH = 30;
 		eff.frameOffsets = { {65, 224}, {97, 224}, {158, 224} };
@@ -45,7 +46,7 @@ void EffectManager::spawn(EffectType type, float x, float y, bool isPlayer) {
 
 	case EffectType::SPELL_CUTIN:
 		eff.imgPtr = isPlayer ? &imgReimuSpell : &imgSanaeSpell;
-		eff.totalFrames = 1500; // ³ÖĞø 1000ms
+		eff.totalFrames = 1500; // æŒç»­ 1000ms
 		eff.frameInterval = 0;
 		eff.srcX = 0; eff.srcY = 0;
 		eff.srcW = eff.imgPtr->getwidth();
@@ -58,7 +59,7 @@ void EffectManager::spawn(EffectType type, float x, float y, bool isPlayer) {
 		eff.srcW = imgSpellName.getwidth();
 		eff.srcH = imgSpellName.getheight();
 		eff.scale = 5.0f; 
-		// ³õÊ¼Î»ÖÃÉè¶¨ÔÚÓÒÏÂ½Ç
+		// åˆå§‹ä½ç½®è®¾å®šåœ¨å³ä¸‹è§’
 		eff.x = (float)(LeftEdge + WIDTH - 150);
 		eff.y = (float)(TopEdge + HEIGHT - 100);
 		break;
@@ -87,10 +88,10 @@ void EffectManager::update() {
 			break;
 
 		case EffectType::CLEAR_SMALL:
-			if (now - it->lastFrameTime >= it->frameInterval) {
+			if (now - it->lastFrameTime >= (DWORD)it->frameInterval) {
 				it->currentFrame++;
 				it->lastFrameTime = now;
-				if (it->currentFrame >= it->totalFrames) it->active = false;
+				if (it->currentFrame >= (int)it->totalFrames) it->active = false;
 			}
 			break;
 
@@ -98,24 +99,24 @@ void EffectManager::update() {
 		{
 			if (elapsed > 1500) it->active = false; 
 			float gw = WIDTH; 
-			float startX = LeftEdge - it->srcW; 
-			float endX = LeftEdge + gw;      
+			float startX = (float)(LeftEdge - it->srcW);
+			float endX = (float)(LeftEdge + gw);      
 			float centerX = LeftEdge + gw / 2 - it->srcW / 2; 
 
 			float t = (float)elapsed / 1500.0f; 
 
 			if (t < 0.2f) {
-				// 0~0.2s: ¿ìËÙ½ø³¡ 
+				// 0~0.2s: å¿«é€Ÿè¿›åœº 
 				float subT = t / 0.2f; 
 				it->x = startX + (centerX - startX) * (1 - pow(1 - subT, 3));
 			}
 			else if (t < 0.8f) {
-				// 0.2~0.8s: »ºÂıÒÆ¶¯ 
+				// 0.2~0.8s: ç¼“æ…¢ç§»åŠ¨ 
 				float subT = (t - 0.2f) / 0.6f;
 				it->x = centerX + 20.0f * subT;
 			}
 			else {
-				// 0.8~1.0s: ¿ìËÙÀë³¡ 
+				// 0.8~1.0s: å¿«é€Ÿç¦»åœº 
 				float subT = (t - 0.8f) / 0.2f;
 				float currentCenter = centerX + 20.0f;
 				it->x = currentCenter + (endX - currentCenter) * (subT * subT * subT);
@@ -126,12 +127,12 @@ void EffectManager::update() {
 		{
 			float t = elapsed / 1000.0f; 
 			if (t <= 0.3f) {
-				// Ç° 0.3s£º¿ìËÙÊÕËõ
+				// å‰ 0.3sï¼šå¿«é€Ÿæ”¶ç¼©
 				float subT = t / 0.3f;
 				it->scale = 3.0f - (2.0f * subT); 
 			}
 			else if (t <= 1.0f) {
-				// 0.3s~1.0s£º´ÓÓÒÏÂÒÆ¶¯µ½ÓÒÉÏ
+				// 0.3s~1.0sï¼šä»å³ä¸‹ç§»åŠ¨åˆ°å³ä¸Š
 				float subT = (t - 0.3f) / 0.7f;
 				it->scale = 1.0f;
 				float startY = (float)(TopEdge + HEIGHT - 100);
@@ -139,17 +140,17 @@ void EffectManager::update() {
 				it->y = startY + (endY - startY) * subT; 
 			}
 			else {
-				// 1s Ö®ºó£º¾²Ö¹ÔÚÓÒÉÏ
+				// 1s ä¹‹åï¼šé™æ­¢åœ¨å³ä¸Š
 				it->scale = 1.0f;
 				it->y = (float)(TopEdge + 50);
 			}
 			break;
 		}
 		case EffectType::CREATE_BARRAGE:
-			if (now - it->lastFrameTime >= it->frameInterval) {
+			if (now - it->lastFrameTime >= (DWORD)it->frameInterval) {
 				it->currentFrame++;
 				it->lastFrameTime = now;
-				if (it->currentFrame >= it->totalFrames) it->active = false;
+				if (it->currentFrame >= (int)it->totalFrames) it->active = false;
 			}
 			break;
 		}
@@ -164,7 +165,7 @@ void EffectManager::draw() {
 		if (!eff.active) continue;
 
 		if (eff.type == EffectType::EXPLOSION) {
-			// ´ÓĞ¡µ½´óËõ·Å¶¯»­
+			// ä»å°åˆ°å¤§ç¼©æ”¾åŠ¨ç”»
 			long elapsed = now - eff.startTime;
 			float progress = elapsed / 300.0f;
 			if (progress > 1.0f) progress = 1.0f;
@@ -173,7 +174,7 @@ void EffectManager::draw() {
 			float scale = 0.2f + progress * 2.5f;
 			int drawW = (int)(eff.srcW * scale);
 			int drawH = (int)(eff.srcH * scale);
-			// ±£³ÖÖĞĞÄ¶ÔÆë
+			// ä¿æŒä¸­å¿ƒå¯¹é½
 			int drawX = (int)(eff.x - drawW / 2);
 			int drawY = (int)(eff.y - drawH / 2);
 			putimagePNG(drawX, drawY, eff.srcW, eff.srcH, eff.imgPtr, eff.srcX, eff.srcY, drawW, drawH);
@@ -195,15 +196,15 @@ void EffectManager::draw() {
 		}
 		else if (eff.type == EffectType::CREATE_BARRAGE) {
 			int currentSrcX = eff.srcX + (eff.currentFrame * eff.srcW);
-			float progress = (float)eff.currentFrame / max(1, eff.totalFrames - 1);
+			float progress = (float)eff.currentFrame / std::max(1, eff.totalFrames - 1);
 
 			float startScale = 0.5f; 
 			float endScale = 2.0f;  
 
-			// ÏßĞÔ²åÖµ¼ÆËãµ±Ç°±ÈÀı
+			// çº¿æ€§æ’å€¼è®¡ç®—å½“å‰æ¯”ä¾‹
 			float currentScale = startScale + (endScale - startScale) * progress;
 
-			// ¸ù¾İ±ÈÀı¼ÆËã×îÖÕ»æÖÆÔÚÆÁÄ»ÉÏµÄ¿í¸ß
+			// æ ¹æ®æ¯”ä¾‹è®¡ç®—æœ€ç»ˆç»˜åˆ¶åœ¨å±å¹•ä¸Šçš„å®½é«˜
 			int dstW = (int)(eff.srcW * currentScale);
 			int dstH = (int)(eff.srcH * currentScale);
 
@@ -224,33 +225,33 @@ void EffectManager::clearSpellName() {
 void EffectManager::drawSpellRibbons(long elapsed) {
 	int imgW = imgRibbon.getwidth();
 	int imgH = 15;
-	if (imgW <= 0) return; // ·ÀÖ¹³ıÒÔ0
+	if (imgW <= 0) return; // é˜²æ­¢é™¤ä»¥0
 
 	int gapX = 200;
 	int cycleW = imgW + gapX;
-	int count = 12;      // ÊıÁ¿
+	int count = 12;      // æ•°é‡
 	int spacing = HEIGHT / (count + 1);
 
 	for (int i = 0; i < count; ++i) {
 		float y = (float)(spacing * (i + 1));
 
-		// ·½Ïò½»Ìæ£ºÅ¼ÊıĞĞÏòÓÒ(1)£¬ÆæÊıĞĞÏò×ó(-1)
+		// æ–¹å‘äº¤æ›¿ï¼šå¶æ•°è¡Œå‘å³(1)ï¼Œå¥‡æ•°è¡Œå‘å·¦(-1)
 		int dir = (i % 2 == 0) ? 1 : -1;
 		float speed = 0.5f;
-		// ¼ÆËãµ±Ç°×ÜÎ»ÒÆ
+		// è®¡ç®—å½“å‰æ€»ä½ç§»
 		float totalMove = elapsed * speed * dir;
-		// Ê¹ÓÃ fmod ¶ÔÎ»ÒÆÈ¡Ä££¬È·±£ startX ÓÀÔ¶ÔÚ [-imgW, 0] Ö®¼äÑ­»·
+		// ä½¿ç”¨ fmod å¯¹ä½ç§»å–æ¨¡ï¼Œç¡®ä¿ startX æ°¸è¿œåœ¨ [-imgW, 0] ä¹‹é—´å¾ªç¯
 		float startX = fmod(totalMove, (float)cycleW);
 		while (startX > -cycleW) {
 			startX -= cycleW;
 		}
-		// Èç¹ûÊÇÏòÓÒ¹ö¶¯£¬È¡Ä£ºóĞèÒªÏò×óÆ½ÒÆÒ»¸öµ¥Î»ÒÔÌîÂú×ó²à±ßÔµ
+		// å¦‚æœæ˜¯å‘å³æ»šåŠ¨ï¼Œå–æ¨¡åéœ€è¦å‘å·¦å¹³ç§»ä¸€ä¸ªå•ä½ä»¥å¡«æ»¡å·¦ä¾§è¾¹ç¼˜
 		while (startX > -imgW) {
 			startX -= imgW;
 		}
-		// ´Ó×ó²àÆğÊ¼µã¿ªÊ¼£¬Ò»ÕÅ½ÓÒ»ÕÅ»­£¬Ö±µ½ÌîÂúÆÁÄ»¿í¶È
+		// ä»å·¦ä¾§èµ·å§‹ç‚¹å¼€å§‹ï¼Œä¸€å¼ æ¥ä¸€å¼ ç”»ï¼Œç›´åˆ°å¡«æ»¡å±å¹•å®½åº¦
 		for (float x = startX; x < WIDTH; x += cycleW) {
-			// y - imgH / 2 ÊÇÎªÁËÈÃ´ø×ÓÖĞĞÄ¶ÔÆë y ×ø±ê
+			// y - imgH / 2 æ˜¯ä¸ºäº†è®©å¸¦å­ä¸­å¿ƒå¯¹é½ y åæ ‡
 			putimagePNG((int)x, (int)y - imgH / 2, imgW, imgH, &imgRibbon, 0, 97, imgW * 2, imgH * 2);
 		}
 	}

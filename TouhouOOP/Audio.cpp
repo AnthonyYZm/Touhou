@@ -1,8 +1,8 @@
 #include "Audio.h"
-#include <windows.h>
 #include <iostream>
 #include <mmsystem.h>
 
+#if 0
 AudioManager::AudioManager() { loaded = false; }
 
 AudioManager::~AudioManager() {
@@ -23,26 +23,26 @@ void AudioManager::init() {
 
 	pooledSounds = { L"barrage", L"break", L"clear", L"hit", L"pickup" };
 
-	sounds[L"bgm_stage1"] = L"resource/bgm/¡¾–|·½ïLÉñåh¡¿¡« Éñ¡©¤¬Áµ¤·¤¿»ÃÏëà_ ¡«¡¡.mp3";
-	sounds[L"bgm_sanae"] = L"resource/bgm/¡¾–|·½ïLÉñåh¡¿¡« ĞÅÑö¤Ïƒ¤­ÈËég¤Îé¤Ë ¡«¡¡.mp3";
+	sounds[L"bgm_stage1"] = L"resource/bgm/stage1.mp3";
+	sounds[L"bgm_sanae"] = L"resource/bgm/sanae.mp3";
 
-	// Ô¤¼ÓÔØ 
+	// åˆå§‹åŒ–éŸ³é¢‘èµ„æº
 	for (auto const& [name, path] : sounds) {
-		// ¼ì²éÕâ¸öÒôĞ§ÊÇ·ñÊôÓÚ¸ßÆµÒôĞ§
+		// åˆ¤æ–­å½“å‰éŸ³æ•ˆæ˜¯å¦ä½¿ç”¨å¯¹è±¡æ± 
 		bool isPooled = std::find(pooledSounds.begin(), pooledSounds.end(), name) != pooledSounds.end();
 
 		if (isPooled) {
-			// Èç¹ûÊÇ¸ßÆµÒôĞ§£¬¼ÓÔØ POOL_SIZE ´Î
+			// ä¸ºæ± åŒ–éŸ³æ•ˆé¢„å…ˆæ‰“å¼€ POOL_SIZE ä¸ªå®ä¾‹
 			for (int i = 0; i < POOL_SIZE; ++i) {
 				std::wstring alias = name + L"_" + std::to_wstring(i);
 				std::wstring cmd = L"open \"" + path + L"\" alias " + alias;
 				mciSendString(cmd.c_str(), NULL, 0, NULL);
 			}
-			poolIndex[name] = 0; // ³õÊ¼»¯Ë÷Òı
+			poolIndex[name] = 0; // è½®è½¬æ’­æ”¾ç´¢å¼•
 			lastPlayTime[name] = 0;
 		}
 		else {
-			// ÆÕÍ¨ÒôĞ§Ö»¼ÓÔØÒ»´Î
+			// éæ± åŒ–éŸ³æ•ˆåªä¿ç•™ä¸€ä¸ªå®ä¾‹
 			std::wstring cmd = L"open \"" + path + L"\" alias " + name;
 			mciSendString(cmd.c_str(), NULL, 0, NULL);
 		}
@@ -54,14 +54,14 @@ void AudioManager::init() {
 
 
 void AudioManager::play(const std::wstring& name) {
-	// °²È«¼ì²é
+	// æœªæ³¨å†ŒéŸ³æ•ˆç›´æ¥è¿”å›
 	if (sounds.find(name) == sounds.end()) return;
-	// ÒôĞ§ÏŞÁ÷ 
+	// è·å–å½“å‰æ—¶é—´æˆ³
 	DWORD now = GetTickCount();
 
-	// Õë¶Ô¸ßÆµÒôĞ§½øĞĞÏŞÁ÷
+	// é«˜é¢‘éŸ³æ•ˆåŠ å…¥èŠ‚æµï¼Œé¿å…è¿‡åº¦å åŠ 
 	if (name == L"barrage" || name == L"break" || name == L"hit") {
-		// Éè¶¨×îĞ¡¼ä¸ôÎª 40ms£¬Ô¼Ã¿Ãë 25 ´Î
+		// æœ€çŸ­é—´éš” 40msï¼ˆçº¦ 25 æ¬¡/ç§’ï¼‰
 		const int MIN_INTERVAL = 40;
 
 		if (now - lastPlayTime[name] < MIN_INTERVAL) {
@@ -70,7 +70,7 @@ void AudioManager::play(const std::wstring& name) {
 		lastPlayTime[name] = now;
 	}
 
-	// Õı³£²¥·ÅÆäËûÒôĞ§
+	// æ ¹æ®æ˜¯å¦æ± åŒ–é€‰æ‹©æ’­æ”¾ç­–ç•¥
 	bool isPooled = std::find(pooledSounds.begin(), pooledSounds.end(), name) != pooledSounds.end();
 
 	if (isPooled) {
@@ -87,10 +87,10 @@ void AudioManager::play(const std::wstring& name) {
 }
 
 void AudioManager::playBGM(const std::wstring& name) {
-	// Èç¹ûÇëÇóµÄ BGM ÒÑ¾­ÔÚ²¥·Å£¬Ö±½Ó·µ»Ø
+	// ç›¸åŒ BGM ä¸é‡å¤æ’­æ”¾ï¼Œé¿å…é‡ç½®è¿›åº¦
 	if (currentBGM == name) return;
 
-	// Èç¹ûµ±Ç°ÓĞ BGM ÔÚ²¥·Å£¬ÏÈÍ£Ö¹Ëü
+	// è‹¥å·²æœ‰ BGMï¼Œå…ˆåœæ­¢å½“å‰æ›²ç›®
 	if (!currentBGM.empty()) {
 		std::wstring cmdStop = L"stop " + currentBGM;
 		mciSendString(cmdStop.c_str(), NULL, 0, NULL);
@@ -112,4 +112,275 @@ void AudioManager::stopBGM() {
 		mciSendString(cmd.c_str(), NULL, 0, NULL);
 		currentBGM = L"";
 	}
+}
+#endif
+
+#include <mfapi.h>
+#include <mfidl.h>
+#include <mfreadwrite.h>
+#include <filesystem>
+
+AudioManager::AudioManager()
+	: loaded(false),
+	comInitialized(false),
+	mfInitialized(false),
+	xaudio(nullptr),
+	masteringVoice(nullptr),
+	bgmVoice(nullptr) {
+}
+
+AudioManager::~AudioManager() {
+	std::lock_guard<std::mutex> lock(audioMutex);
+	releaseAllSounds();
+}
+
+void AudioManager::destroyVoices(SoundData& data) {
+	for (auto* voice : data.voices) {
+		if (voice != nullptr) {
+			voice->Stop(0);
+			voice->DestroyVoice();
+		}
+	}
+	data.voices.clear();
+}
+
+void AudioManager::releaseAllSounds() {
+	stopBGM();
+
+	for (auto& [_, data] : loadedSounds) {
+		destroyVoices(data);
+		if (data.waveFormat != nullptr) {
+			CoTaskMemFree(data.waveFormat);
+			data.waveFormat = nullptr;
+		}
+	}
+	loadedSounds.clear();
+
+	if (masteringVoice != nullptr) {
+		masteringVoice->DestroyVoice();
+		masteringVoice = nullptr;
+	}
+	if (xaudio != nullptr) {
+		xaudio->Release();
+		xaudio = nullptr;
+	}
+	if (mfInitialized) {
+		MFShutdown();
+		mfInitialized = false;
+	}
+	if (comInitialized) {
+		CoUninitialize();
+		comInitialized = false;
+	}
+
+	loaded = false;
+	currentBGM.clear();
+}
+
+bool AudioManager::decodeToPCM(const std::wstring& path, SoundData& outData) {
+	// ä½¿ç”¨ Media Foundation å°†å‹ç¼©éŸ³é¢‘æµè§£ç ä¸º PCMï¼Œå¹¶ç¼“å­˜åˆ°å†…å­˜ä¸­ä¾› XAudio2 æ’­æ”¾
+	IMFSourceReader* reader = nullptr;
+	IMFMediaType* mediaType = nullptr;
+	IMFMediaType* outputType = nullptr;
+
+	HRESULT hr = MFCreateSourceReaderFromURL(path.c_str(), nullptr, &reader);
+	if (FAILED(hr)) return false;
+
+	hr = MFCreateMediaType(&mediaType);
+	if (SUCCEEDED(hr)) hr = mediaType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio);
+	if (SUCCEEDED(hr)) hr = mediaType->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_PCM);
+	if (SUCCEEDED(hr)) hr = reader->SetCurrentMediaType((DWORD)MF_SOURCE_READER_FIRST_AUDIO_STREAM, nullptr, mediaType);
+	if (SUCCEEDED(hr)) hr = reader->GetCurrentMediaType((DWORD)MF_SOURCE_READER_FIRST_AUDIO_STREAM, &outputType);
+	if (SUCCEEDED(hr)) {
+		UINT32 formatSize = 0;
+		hr = MFCreateWaveFormatExFromMFMediaType(outputType, &outData.waveFormat, &formatSize, MFWaveFormatExConvertFlag_Normal);
+	}
+	if (FAILED(hr) || outData.waveFormat == nullptr) {
+		if (outputType) outputType->Release();
+		if (mediaType) mediaType->Release();
+		if (reader) reader->Release();
+		return false;
+	}
+
+	outData.pcm.clear();
+	// é€å¸§è¯»å–æ ·æœ¬å¹¶æ‹¼æ¥åˆ° PCM ç¼“å†²ï¼Œé¿å…é¢‘ç¹ç£ç›˜ I/O å¯¼è‡´æ’­æ”¾æŠ–åŠ¨
+	while (true) {
+		DWORD flags = 0;
+		IMFSample* sample = nullptr;
+		hr = reader->ReadSample((DWORD)MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, nullptr, &flags, nullptr, &sample);
+		if (FAILED(hr)) break;
+		if (flags & MF_SOURCE_READERF_ENDOFSTREAM) {
+			if (sample) sample->Release();
+			break;
+		}
+		if (sample != nullptr) {
+			IMFMediaBuffer* buffer = nullptr;
+			if (SUCCEEDED(sample->ConvertToContiguousBuffer(&buffer))) {
+				BYTE* data = nullptr;
+				DWORD maxLen = 0;
+				DWORD curLen = 0;
+				if (SUCCEEDED(buffer->Lock(&data, &maxLen, &curLen)) && curLen > 0) {
+					size_t oldSize = outData.pcm.size();
+					outData.pcm.resize(oldSize + curLen);
+					memcpy(outData.pcm.data() + oldSize, data, curLen);
+					buffer->Unlock();
+				}
+				buffer->Release();
+			}
+			sample->Release();
+		}
+	}
+
+	if (outputType) outputType->Release();
+	if (mediaType) mediaType->Release();
+	if (reader) reader->Release();
+	return !outData.pcm.empty();
+}
+
+void AudioManager::init() {
+	std::lock_guard<std::mutex> lock(audioMutex);
+	if (loaded) return;
+
+	// åˆå§‹åŒ– COM + Media Foundation + XAudio2ï¼Œä»»ä¸€æ­¥å¤±è´¥åˆ™ä¿æŒæœªåŠ è½½çŠ¶æ€
+	HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+	if (SUCCEEDED(hr)) comInitialized = true;
+	else if (hr != RPC_E_CHANGED_MODE) return;
+
+	hr = MFStartup(MF_VERSION);
+	if (FAILED(hr)) return;
+	mfInitialized = true;
+
+	hr = XAudio2Create(&xaudio, 0, XAUDIO2_DEFAULT_PROCESSOR);
+	if (FAILED(hr)) return;
+	hr = xaudio->CreateMasteringVoice(&masteringVoice);
+	if (FAILED(hr)) return;
+
+	sounds[L"fire"] = L"resource/sound/fire.wav";
+	sounds[L"hit"] = L"resource/sound/se_damage00.wav";
+	sounds[L"break"] = L"resource/sound/se_enep00.wav";
+	sounds[L"barrage"] = L"resource/sound/barrage_tan2.wav";
+	sounds[L"spell"] = L"resource/sound/spell.wav";
+	sounds[L"clear"] = L"resource/sound/se_enep00.wav";
+	sounds[L"dead"] = L"resource/sound/se_pldead00.wav";
+	sounds[L"pickup"] = L"resource/sound/se_item00.wav";
+	sounds[L"breakBoss"] = L"resource/sound/break_boss.wav";
+
+	// æ‰«æ BGM ç›®å½•å¹¶å»ºç«‹æ›²ç›®æ˜ å°„
+	std::vector<std::wstring> discoveredBGM;
+	try {
+		for (const auto& entry : std::filesystem::directory_iterator(L"resource/bgm")) {
+			if (!entry.is_regular_file()) continue;
+			std::wstring ext = entry.path().extension().wstring();
+			std::transform(ext.begin(), ext.end(), ext.begin(), towlower);
+			if (ext == L".mp3" || ext == L".wav" || ext == L".ogg") {
+				discoveredBGM.push_back(entry.path().wstring());
+			}
+		}
+	}
+	catch (...) {}
+
+	if (!discoveredBGM.empty()) {
+		std::sort(discoveredBGM.begin(), discoveredBGM.end());
+
+		// é»˜è®¤å…œåº•ï¼šæŒ‰æ’åºé€‰æ‹©å‰ä¸¤é¦–
+		size_t stage1Index = 0;
+		size_t sanaeIndex = (discoveredBGM.size() > 1) ? 1 : 0;
+
+		// ç²¾ç¡®åŒ¹é…æ–‡ä»¶åï¼šstage1.mp3 ä¸ sanae.mp3
+		for (size_t i = 0; i < discoveredBGM.size(); ++i) {
+			std::wstring filename = std::filesystem::path(discoveredBGM[i]).filename().wstring();
+			std::transform(filename.begin(), filename.end(), filename.begin(), towlower);
+
+			if (filename == L"stage1.mp3") {
+				stage1Index = i;
+			}
+			else if (filename == L"sanae.mp3") {
+				sanaeIndex = i;
+			}
+		}
+
+		sounds[L"bgm_stage1"] = discoveredBGM[stage1Index];
+		sounds[L"bgm_sanae"] = discoveredBGM[sanaeIndex];
+	}
+
+	for (const auto& [name, path] : sounds) {
+		SoundData data;
+		data.isBGM = (name.rfind(L"bgm_", 0) == 0);
+		if (!decodeToPCM(path, data)) continue;
+
+		if (!data.isBGM) {
+			// SFX é¢„åˆ›å»ºå¤šä¸ª SourceVoice åšå¯¹è±¡æ± ï¼Œæ”¯æŒé«˜é¢‘çŸ­éŸ³æ•ˆå¹¶å‘æ’­æ”¾
+			for (int i = 0; i < POOL_SIZE; ++i) {
+				IXAudio2SourceVoice* voice = nullptr;
+				if (SUCCEEDED(xaudio->CreateSourceVoice(&voice, data.waveFormat))) {
+					data.voices.push_back(voice);
+				}
+			}
+		}
+		loadedSounds.emplace(name, std::move(data));
+	}
+
+	loaded = true;
+	currentBGM.clear();
+}
+
+void AudioManager::play(const std::wstring& name) {
+	std::lock_guard<std::mutex> lock(audioMutex);
+	if (!loaded) return;
+
+	auto it = loadedSounds.find(name);
+	if (it == loadedSounds.end() || it->second.isBGM || it->second.voices.empty()) return;
+
+	SoundData& data = it->second;
+	// è½®è¯¢é€‰æ‹©ä¸‹ä¸€ä¸ªå¯ç”¨ voiceï¼Œå‡å°‘é‡å¤è§¦å‘æ—¶çš„è¦†ç›–å’Œæˆªæ–­
+	IXAudio2SourceVoice* voice = data.voices[data.nextVoice];
+	data.nextVoice = (data.nextVoice + 1) % data.voices.size();
+
+	XAUDIO2_BUFFER buffer = {};
+	buffer.AudioBytes = static_cast<UINT32>(data.pcm.size());
+	buffer.pAudioData = data.pcm.data();
+	buffer.Flags = XAUDIO2_END_OF_STREAM;
+
+	voice->Stop(0);
+	voice->FlushSourceBuffers();
+	if (SUCCEEDED(voice->SubmitSourceBuffer(&buffer))) {
+		voice->Start(0);
+	}
+}
+
+void AudioManager::playBGM(const std::wstring& name) {
+	std::lock_guard<std::mutex> lock(audioMutex);
+	if (!loaded) return;
+	if (currentBGM == name) return;
+
+	stopBGM();
+	// BGM åˆ‡æ¢å…¥å£ç”± Game::handleBGM æ§åˆ¶ï¼Œæ­¤å¤„ä»…è´Ÿè´£å®é™…æ’­æ”¾
+
+	auto it = loadedSounds.find(name);
+	if (it == loadedSounds.end() || !it->second.isBGM) return;
+
+	SoundData& data = it->second;
+	if (FAILED(xaudio->CreateSourceVoice(&bgmVoice, data.waveFormat))) return;
+
+	XAUDIO2_BUFFER buffer = {};
+	buffer.AudioBytes = static_cast<UINT32>(data.pcm.size());
+	buffer.pAudioData = data.pcm.data();
+	buffer.Flags = XAUDIO2_END_OF_STREAM;
+	buffer.LoopCount = XAUDIO2_LOOP_INFINITE;
+	// è®¾ç½®ä¸ºæ— é™å¾ªç¯ï¼Œç›´åˆ°å¤–éƒ¨æ˜¾å¼è°ƒç”¨ stopBGM
+
+	if (SUCCEEDED(bgmVoice->SubmitSourceBuffer(&buffer)) && SUCCEEDED(bgmVoice->Start(0))) {
+		currentBGM = name;
+	}
+}
+
+void AudioManager::stopBGM() {
+	if (bgmVoice != nullptr) {
+		// å…ˆåœæ­¢å¹¶æ¸…ç©ºç¼“å†²ï¼Œå†é”€æ¯ voiceï¼Œç¡®ä¿ä¸‹æ¬¡åˆ‡æ­Œä»å¤´å¼€å§‹
+		bgmVoice->Stop(0);
+		bgmVoice->FlushSourceBuffers();
+		bgmVoice->DestroyVoice();
+		bgmVoice = nullptr;
+	}
+	currentBGM.clear();
 }

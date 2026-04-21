@@ -12,7 +12,7 @@ private:
 	IMAGE bg;
 	IMAGE bgNormal;
 	IMAGE bgSpellBase;  
-	IMAGE bgSpellLayer; // (������)
+	IMAGE bgSpellLayer; // (¹ö¶¯²ã)
 	BGMode currentMode;
 
 	float scrollY; 
@@ -22,6 +22,8 @@ public:
 	void init();
 	void update();
 	void draw();
+	// 仅绘制全屏底图（与 init 中加载的 bg.png 一致），用于主菜单等
+	void drawBackdropOnly();
 	BGMode getMode() const { return currentMode; }
 	void setMode(BGMode mode);
 };

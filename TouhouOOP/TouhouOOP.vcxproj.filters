@@ -51,6 +51,9 @@
     <ClCompile Include="Background.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="AIController.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Role.h">
@@ -95,5 +98,13 @@
     <ClInclude Include="Background.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="AIController.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ai_server.py">
+      <Filter>源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>

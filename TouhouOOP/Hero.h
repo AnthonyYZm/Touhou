@@ -41,6 +41,7 @@ public:
 	void addBomb(int b);
 
 	bool isInvincible() const { return invincible; }
+	bool isAlive() const { return alive; }
 	int getPower() const { return power; }
 	int getLives() const { return lives; }
 	int getBombs() const { return bombCount; }

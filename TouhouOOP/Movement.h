@@ -1,12 +1,13 @@
 #pragma once
+#pragma execution_character_set("utf-8")
 #include "Enemy.h"
 #include <cmath>
 #include <functional>
 
-// ÒÆ¶¯²ßÂÔ¿â
+// ç§»åŠ¨ç­–ç•¥åº“
 namespace Moves {
 
-    // Ö±ÏßÒÆ¶¯ 
+    // ç›´çº¿ç§»åŠ¨ 
     static MoveStrategy Linear(float vx, float vy) {
         return [=](Enemy* e, int t) {
             e->x += vx;
@@ -14,16 +15,16 @@ namespace Moves {
             };
     }
 
-    // ÕýÏÒ²¨ÒÆ¶¯ (²ÎÊý£ºÖÐÐÄX£¬Õñ·ù£¬ÆµÂÊ£¬ÏÂÂäËÙ¶È)
+    // æ­£å¼¦æ³¢ç§»åŠ¨ (å‚æ•°ï¼šä¸­å¿ƒXï¼ŒæŒ¯å¹…ï¼Œé¢‘çŽ‡ï¼Œä¸‹è½é€Ÿåº¦)
     static MoveStrategy SineWave(float centerX, float amplitude, float freq, float speedY) {
         return [=](Enemy* e, int t) {
-            e->y += speedY; // YÖáÔÈËÙ
-            // XÖáÕðµ´£ºsin(Ê±¼ä * ÆµÂÊ)
+            e->y += speedY; // Yè½´åŒ€é€Ÿ
+            // Xè½´éœ‡è¡ï¼šsin(æ—¶é—´ * é¢‘çŽ‡)
             e->x = centerX + amplitude * sin(t * freq * 0.001f);
             };
     }
 
-    //ÐüÍ£ 
+    //æ‚¬åœ 
     static MoveStrategy Hover(float targetY, float speed) {
         return [=](Enemy* e, int t) {
             if (e->y < targetY) {
@@ -52,37 +53,37 @@ namespace Moves {
     static MoveStrategy shuttle(float speed, int dir) {
         return [=](Enemy* e, int t) {
             if (dir == 0) e->x -= speed;
-			else e->x += speed;
+            else e->x += speed;
             };
-	}
+    }
 
     static MoveStrategy Stay() {
         return [=](Enemy* e, int t) {
             e->x = e->x;
             e->y = e->y;
             };
-	}
-   
-	
+    }
+
+
     static MoveStrategy StepLeftUp(int interval, int duration, float speedX, float speedY) {
         return [=](Enemy* e, int timer) {
             int t = timer % interval;
             int moveCnt = timer / interval;
             if (t < duration) {
-                // ¸ù¾ÝÖÜÆÚÊý¶Ô 3 È¡Ä££¬¾ö¶¨µ±Ç°ÖÜÆÚµÄ¶¯×÷·½Ïò
+                // æ ¹æ®å‘¨æœŸæ•°å¯¹ 3 å–æ¨¡ï¼Œå†³å®šå½“å‰å‘¨æœŸçš„åŠ¨ä½œæ–¹å‘
                 int actionType = moveCnt % 3;
 
                 switch (actionType) {
-                case 0: // µÚÒ»¸öÖÜÆÚ£ºÏò×óÉÏÒÆ¶¯
+                case 0: // ç¬¬ä¸€ä¸ªå‘¨æœŸï¼šå‘å·¦ä¸Šç§»åŠ¨
                     e->x -= speedX;
                     e->y -= speedY;
                     break;
 
-                case 1: // µÚ¶þ¸öÖÜÆÚ£ºÏòÏÂÒÆ¶¯
-                    e->y += speedY * 2; 
+                case 1: // ç¬¬äºŒä¸ªå‘¨æœŸï¼šå‘ä¸‹ç§»åŠ¨
+                    e->y += speedY * 2;
                     break;
 
-                case 2: // µÚÈý¸öÖÜÆÚ£ºÏòÓÒÉÏÒÆ¶¯
+                case 2: // ç¬¬ä¸‰ä¸ªå‘¨æœŸï¼šå‘å³ä¸Šç§»åŠ¨
                     e->x += speedX;
                     e->y -= speedY;
                     break;

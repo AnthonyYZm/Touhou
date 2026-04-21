@@ -1,4 +1,6 @@
+#pragma execution_character_set("utf-8")
 #include "EnemyManager.h"
+#include <unordered_set>
 
 EnemyManager::EnemyManager() {
 	aliveEnemy = 0; 
@@ -27,22 +29,22 @@ void EnemyManager::setWave(const std::vector<SpawnEvent>& event) {
 }
 
 void EnemyManager::updateSpawns() {
-	// Èç¹ûÈ«¶¼¿ÕÁË£¬¾ÍÃ»±ØÒªÅÜÂß¼­ÁË
+	// å¦‚æœå…¨éƒ½ç©ºäº†ï¼Œå°±æ²¡å¿…è¦è·‘é€»è¾‘äº†
 	if (clear && eventQueue.empty() && activeEvents.empty() && enemyList.empty()) return;
 
 	DWORD now = GetTickCount();
 	DWORD waveTime = now - waveStartTime;
 
-	// ½«ËùÓĞÊ±¼äµ½ÁËµÄÊÂ¼ş´Ó¶ÓÁĞÒÆ¶¯µ½»îÔ¾ÁĞ±í
+	// å°†æ‰€æœ‰æ—¶é—´åˆ°äº†çš„äº‹ä»¶ä»é˜Ÿåˆ—ç§»åŠ¨åˆ°æ´»è·ƒåˆ—è¡¨
 	while (!eventQueue.empty()) {
-		// »ñÈ¡¶ÓÍ·ÊÂ¼ş
+		// è·å–é˜Ÿå¤´äº‹ä»¶
 		SpawnEvent& ev = eventQueue.front();
-		// Èç¹û²¨´ÎÊ±¼äÒÑ¾­³¬¹ıÁË¸ÃÊÂ¼şµÄ startTime£¬ËµÃ÷¸Ã¿ªÊ¼Éú³ÉÕâÒ»×éÁË
+		// å¦‚æœæ³¢æ¬¡æ—¶é—´å·²ç»è¶…è¿‡äº†è¯¥äº‹ä»¶çš„ startTimeï¼Œè¯´æ˜è¯¥å¼€å§‹ç”Ÿæˆè¿™ä¸€ç»„äº†
 		if (waveTime >= (DWORD)ev.startTime) {
-			// ³õÊ¼»¯ÔËĞĞÊ±×´Ì¬
+			// åˆå§‹åŒ–è¿è¡Œæ—¶çŠ¶æ€
 			ev.spawnedCount = 0;
 			ev.lastSpawnTime = 0; 
-			// ÒÆ¶¯µ½»îÔ¾ÁĞ±í
+			// ç§»åŠ¨åˆ°æ´»è·ƒåˆ—è¡¨
 			activeEvents.push_back(ev);
 			eventQueue.pop();
 		}
@@ -51,19 +53,18 @@ void EnemyManager::updateSpawns() {
 		}
 	}
 
-	// ±éÀú»îÔ¾ÁĞ±í£¬Ö´ĞĞÉú³ÉÂß¼­
+	// éå†æ´»è·ƒåˆ—è¡¨ï¼Œæ‰§è¡Œç”Ÿæˆé€»è¾‘
 	for (auto it = activeEvents.begin(); it != activeEvents.end(); ) {
 		SpawnEvent& ev = *it; 
 		if (ev.lastSpawnTime == 0 || (now - ev.lastSpawnTime >= (DWORD)ev.interval)) {
 
-			createEnemy(ev); // Éú³ÉÒ»¸öµĞÈË
+			createEnemy(ev); 
 
 			ev.lastSpawnTime = now;
 			ev.spawnedCount++;
 
-			// ¼ì²éÕâÒ»×éÊÇ·ñÉú³ÉÍê±Ï
 			if (ev.spawnedCount >= ev.count) {
-				// Éú³ÉÍêÁË£¬´Ó»îÔ¾ÁĞ±íÖĞÒÆ³ı
+				// ç”Ÿæˆå®Œäº†ï¼Œä»æ´»è·ƒåˆ—è¡¨ä¸­ç§»é™¤
 				it = activeEvents.erase(it);
 				continue; 
 			}
@@ -82,25 +83,25 @@ bool EnemyManager::checkEnemyClear() {
 }
 
 void EnemyManager::createEnemy(const SpawnEvent& ev) {
-	// ÌØÊâÇé¿ö£ºÈç¹ûÊÇ Boss
+	// ç‰¹æ®Šæƒ…å†µï¼šå¦‚æœæ˜¯ Boss
 	if (ev.bossInstance != nullptr) {
 		ev.bossInstance->alive = true;
 		enemyList.push_back(ev.bossInstance);
 		aliveEnemy++;
 		return;
 	}
-	// ÆÕÍ¨µĞÈËÉú³É
+	// æ™®é€šæ•Œäººç”Ÿæˆ
 	Enemy* newEnemy = new Enemy(ev.startX, ev.startY, ev.hp); 
 	newEnemy->type = ev.type;
 	newEnemy->alive = true;
 	if (newEnemy->type == eType::boss) {
-		newEnemy->maxHp = (ev.hp > 0) ? ev.hp : 2000; // Èç¹ûÊÂ¼şÃ»ÉèÑªÁ¿£¬¸øÄ¬ÈÏ2000
+		newEnemy->maxHp = (ev.hp > 0) ? ev.hp : 2000; // é»˜è®¤2000è¡€
 		newEnemy->hp = newEnemy->maxHp;
-		newEnemy->phase = 1; // ³õÊ¼½×¶Î
+		newEnemy->phase = 1; 
 	}
-	// ×¢ÈëÒÆ¶¯²ßÂÔ
+	// æ³¨å…¥ç§»åŠ¨ç­–ç•¥
 	newEnemy->setStrategy(ev.moveLogic);
-	// ×¢Èëµ¯Ä»ÈÎÎñ
+	// æ³¨å…¥å¼¹å¹•ä»»åŠ¡
 	for (const auto& task : ev.initTasks) {
 		newEnemy->AddTask(task);
 	}
@@ -109,7 +110,7 @@ void EnemyManager::createEnemy(const SpawnEvent& ev) {
 }
 
 void EnemyManager::moveEnemy() {
-	updateSpawns(); // ÏÈ¿´¿´ÓĞÃ»ÓĞĞÂ¹ÖÒªË¢
+	updateSpawns(); // å…ˆçœ‹çœ‹æœ‰æ²¡æœ‰æ–°æ€ªè¦åˆ·
 	for (auto it = enemyList.begin(); it != enemyList.end(); ++it) {
 		Enemy* e = *it;
 		if (e == nullptr) continue;
@@ -159,15 +160,37 @@ void EnemyManager::drawAll() {
 }
 
 void EnemyManager::clearEnemy() {
+	// ç»Ÿä¸€å›æ”¶å½“å‰åœºæ™¯ä¸­çš„æ•Œäººï¼Œé¿å…é—ç•™æ‚¬ç©ºæŒ‡é’ˆã€‚
+	std::unordered_set<Enemy*> released;
 	for (auto* e : enemyList) {
-		delete e;
+		if (e != nullptr && released.insert(e).second) {
+			delete e;
+		}
 	}
+	enemyList.clear();
+
+	// å›æ”¶å°šæœªåˆ·å‡ºçš„ Boss å®ä¾‹ï¼ˆæŒ‚åœ¨äº‹ä»¶ä¸­ï¼‰ã€‚
+	auto releaseSpawnBoss = [&](SpawnEvent& ev) {
+		if (ev.bossInstance != nullptr && released.insert(ev.bossInstance).second) {
+			delete ev.bossInstance;
+		}
+		ev.bossInstance = nullptr;
+	};
+
+	while (!eventQueue.empty()) {
+		SpawnEvent ev = eventQueue.front();
+		eventQueue.pop();
+		releaseSpawnBoss(ev);
+	}
+	for (auto& ev : activeEvents) {
+		releaseSpawnBoss(ev);
+	}
+	activeEvents.clear();
 }
 
 void EnemyManager::InitRound() {
 	enemyIdx = 0;
 	aliveEnemy = 0;
 	clear = true;
-	for (auto* e : enemyList) delete e;
-	enemyList.clear();
+	clearEnemy();
 }
