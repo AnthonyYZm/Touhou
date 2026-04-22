@@ -1,4 +1,4 @@
-# 东方Project OOP - 弹幕射击游戏与AI自动控制避障算法
+# 东方Project - 弹幕射击游戏与AI自动控制避障算法
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/yourusername/TouhouOOP)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -13,7 +13,7 @@
 
 ## ✨ 核心功能
 
-- **🎮 双游戏模式**
+- **🎮 双模式**
   - 普通模式：玩家手动操控自机进行游戏
   - AI 演示模式：基于 Python + UDP 通信的智能 AI 自动游玩
 
@@ -22,28 +22,14 @@
   - 基于时间轴的波次生成系统（Wave System）
   - Boss 多阶段战斗机制，每个阶段拥有独立的血量、移动逻辑和弹幕模式
 
-- **💥 复杂弹幕系统**
-  - 10+ 种弹幕类型：直线弹、风车弹、烟花弹、环形弹、瞄准弹、五芒星弹等
-  - 多种子弹样式和颜色配置
-
 - **🎯 碰撞检测系统**
   - 圆形碰撞检测算法
   - 自机判定点（JudgePoint）机制
-  - 无敌时间（Invincibility）保护
-
-- **🎵 音频系统**
-  - BGM 背景音乐自动切换（普通关卡 / Boss 战）
-  - 音效系统（射击、爆炸、符卡展开等）
 
 - **🤖 AI 控制系统**
   - Python 服务器通过 UDP 接收游戏状态
   - 混合避障算法：结合 AI 意图和局部斥力场
   - 实时游戏状态同步（自机、敌人、弹幕位置）
-
-- **🎨 视觉效果**
-  - 爆炸特效、符卡立绘、背景切换
-  - 60 FPS 稳定帧率控制
-  - UI 显示（残机、符卡数、分数、Boss 血条）
 
 ---
 
@@ -438,6 +424,14 @@ python ai_server.py
 - 按住 **TAB** 键显示碰撞判定圈（红色中心点 + 绿色判定圈）
 - 修改 `Library.h` 中的常量可快速调整游戏区域大小
 - 使用 Visual Studio 的性能分析器定位性能瓶颈
+
+---
+
+## 后续开发规划
+
+- 优化斥力算法
+- 增加弹幕类型
+- 使用强化学习训练避障模型，替换现有的外部大模型操控
 
 ---
 
