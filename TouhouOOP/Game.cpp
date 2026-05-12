@@ -26,6 +26,7 @@ Game::Game() {
 	Audio.init();
 	Effects.init();
 	BG.init();
+	InitBarrageHandlers(); // 构建弹幕分发表
 
 	// 初始化状态为主菜单
 	currentState = GameState::MAIN_MENU;
@@ -687,15 +688,56 @@ void Game::HeroControl() {
 
 void Game::Bullets() {
 
-	if (GetAsyncKeyState('Z') & 0x8000) {
-		B.setFire(true);	
-	}
+	if (GetAsyncKeyState('Z') & 0x8000) { B.setFire(true); }
 
 	// AI 开火
-	if (Hero.fire) {
-		B.setFire(true);
-	}
+	if (Hero.fire) { B.setFire(true); }
 	B.createBullet(&Hero, bulletLevel, E.getList());
+}
+
+void Game::InitBarrageHandlers() {
+	// 表驱动法核心：将 bType 枚举值映射到对应的 Lambda 闭包
+	// 新增弹幕类型时，只需在此处追加一条记录，Barrages() 主循环无需任何改动（符合开闭原则）
+
+	barrageHandlers[bType::down_st] = [this](BarrageTask& task, Enemy& en, int x, int y, int cx, int cy, BulletStyle style, float currentSpeed, DWORD now) {
+		Barr.Normal(en, task.speed, style);
+	};
+
+	// windmill_st 通过 task 引用直接修改 currentAngle，保证状态在连发间正确累积
+	barrageHandlers[bType::windmill_st] = [this](BarrageTask& task, Enemy& en, int x, int y, int cx, int cy, BulletStyle style, float currentSpeed, DWORD now) {
+		constexpr float extraShift = 1.2f;
+		task.currentAngle += (task.omega + extraShift);
+		Barr.straightMill(en, task.speed, (int)task.currentAngle, task.num, x, y, 1, style);
+	};
+
+	barrageHandlers[bType::firework] = [this](BarrageTask& task, Enemy& en, int x, int y, int cx, int cy, BulletStyle style, float currentSpeed, DWORD now) {
+		Barr.fireWork(en, currentSpeed, task.num, x, y, style);
+	};
+
+	barrageHandlers[bType::circle_mill] = [this](BarrageTask& task, Enemy& en, int x, int y, int cx, int cy, BulletStyle style, float currentSpeed, DWORD now) {
+		Barr.circleMill(en, task.speed, task.r, task.num, x, y, style);
+	};
+
+	barrageHandlers[bType::windmill] = [this](BarrageTask& task, Enemy& en, int x, int y, int cx, int cy, BulletStyle style, float currentSpeed, DWORD now) {
+		Barr.straightMill2(en, task.speed, (int)task.omega, task.num, x, y, 1, style);
+	};
+
+	// pincer_aim 通过捕获 this 访问 Hero 的实时坐标
+	barrageHandlers[bType::pincer_aim] = [this](BarrageTask& task, Enemy& en, int x, int y, int cx, int cy, BulletStyle style, float currentSpeed, DWORD now) {
+		Barr.pincerAim(en, Hero.x, Hero.y, currentSpeed, task.r, task.num, x, y, style);
+	};
+
+	barrageHandlers[bType::random_rain] = [this](BarrageTask& task, Enemy& en, int x, int y, int cx, int cy, BulletStyle style, float currentSpeed, DWORD now) {
+		Barr.randomRain(currentSpeed, style);
+	};
+
+	// star_fall 需要 now 计算释放时间，cx/cy 作为爆炸中心点
+	barrageHandlers[bType::star_fall] = [this](BarrageTask& task, Enemy& en, int x, int y, int cx, int cy, BulletStyle style, float currentSpeed, DWORD now) {
+		DWORD releaseTime = task.lastTime + task.r;
+		if (releaseTime < now) releaseTime = now;
+		Barr.fiveStar(en, task.currentBurst, task.burstCount, task.omega,
+			(float)task.x0, task.speed, task.acc, releaseTime, task.num, cx, cy, style);
+	};
 }
 
 void Game::Barrages() {
@@ -765,39 +807,10 @@ void Game::Barrages() {
 			int x = (task.x0 == 0) ? centerX : task.x0;
 			int y = (task.y0 == 0) ? centerY : task.y0;
 
-			switch ((bType)task.type) {
-			case bType::down_st: 
-				Barr.Normal(*en, task.speed, style);
-				break;
-			case bType::windmill_st: {
-				float extraShift = 1.2f; // 每一发都额外多转 1.2 度
-				task.currentAngle += (task.omega + extraShift);
-				Barr.straightMill(*en, task.speed, (int)task.currentAngle, task.num, x, y, 1, style);
-				break;
-			}
-			case bType::firework: 
-				Barr.fireWork(*en, currentSpeed, task.num, x, y, style);
-				break;
-			case bType::circle_mill: 
-				Barr.circleMill(*en, task.speed, task.r, task.num, x, y, style);
-				break;
-			case bType::windmill:
-				Barr.straightMill2(*en, task.speed, (int)task.omega, task.num, x, y, 1, style);
-				break;
-			case bType::pincer_aim:
-				Barr.pincerAim(*en, Hero.x, Hero.y, currentSpeed, task.r, task.num, x, y, style);
-				break;
-			case bType::random_rain: 
-				Barr.randomRain(currentSpeed, style);
-				break;
-			case bType::star_fall: {
-				DWORD releaseTime = task.lastTime + task.r;
-				if (releaseTime < now) releaseTime = now;
-				Barr.fiveStar(*en, task.currentBurst, task.burstCount, task.omega,
-					(float)task.x0, task.speed, task.acc, releaseTime, task.num, centerX, centerY, style);
-				break;
-			}
-			default: break;
+			// 表驱动分发：O(1) 查表，找到对应 handler 并执行
+			auto handlerIt = barrageHandlers.find((bType)task.type);
+			if (handlerIt != barrageHandlers.end()) {
+				handlerIt->second(task, *en, x, y, centerX, centerY, style, currentSpeed, now);
 			}
 
 			task.currentBurst++;

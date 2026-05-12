@@ -15,12 +15,25 @@
 #include "AIController.h"
 #include <imm.h>
 #pragma comment(lib, "imm32.lib")
+#include <functional>
+#include <unordered_map>
 
 // 游戏状态枚举
 enum class GameState {
 	MAIN_MENU,    // 主菜单
 	NORMAL_PLAY,  // 普通模式
 	AI_DEMO       // AI演示模式
+};
+
+// 弹幕处理函数的统一签名
+// 参数：(任务引用, 敌人引用, x, y, centerX, centerY, 子弹样式, 当前速度, 当前时间戳)
+using BarrageHandler = std::function<void(BarrageTask&, Enemy&, int, int, int, int, BulletStyle, float, DWORD)>;
+
+// 为 enum class bType 提供哈希支持，使其可作为 unordered_map 的键
+struct bTypeHash {
+	std::size_t operator()(bType t) const noexcept {
+		return std::hash<int>()(static_cast<int>(t));
+	}
 };
 
 class Game {
@@ -56,6 +69,7 @@ class Game {
 	// AI 控制器
 	AIController* aiController;
 	HANDLE aiProcessHandle = NULL;
+	std::unordered_map<bType, BarrageHandler, bTypeHash> barrageHandlers; // 弹幕分发表
 
 	// 离屏缓冲区（固定游戏分辨率，用于缩放输出）
 	HDC     offDC   = nullptr;
@@ -86,6 +100,7 @@ public:
 	void UpdateItems();
 	void CheckCollision();
 	void Barrages();
+	void InitBarrageHandlers(); // 初始化弹幕分发表
 	void Enemies();
 	void CastSpellCard();
 	void UpdateSpellCard();
@@ -111,5 +126,6 @@ public:
 	}
 	
 	void DrawDebug();
+	
 };
 

@@ -64,6 +64,10 @@ public:
 	int getAliveEnemy() const { return aliveEnemy; }
 	int getEnemyCount() const { return (int)enemyList.size(); }
 
+	void clearList() {
+		enemyList.clear();
+	}
+
 	struct DropReq {
 		float x, y;
 		int count; 
