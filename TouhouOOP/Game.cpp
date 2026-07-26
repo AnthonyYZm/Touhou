@@ -33,16 +33,23 @@ Game::Game() {
 
 	// 初始化 AI 控制器为空指针
 	aiController = nullptr;
+	rlTrainingServer = nullptr;
 }
 
 
 Game::~Game() {
 	ClearSpellBarrages();
+	ClearQueuedWaves();
 
 	// 清理 AI 控制器
 	if (aiController) {
 		delete aiController;
 		aiController = nullptr;
+	}
+
+	if (rlTrainingServer) {
+		delete rlTrainingServer;
+		rlTrainingServer = nullptr;
 	}
 
 	if (aiProcessHandle != NULL) {
@@ -93,6 +100,10 @@ void Game::Touhou() {
 
 		case GameState::AI_DEMO:
 			HandleAIDemo();
+			break;
+
+		case GameState::RL_TRAINING:
+			HandleRLTraining();
 			break;
 		}
 
@@ -277,397 +288,157 @@ void Game::InitNormalLevels() {
 	}
 
 	
-	{
-		waveData wBoss;
-		wBoss.waveDelay = 2000;
-
-		SpawnEvent boss;
-		boss.startTime = 500;
-		boss.count = 1;
-		boss.interval = 0;
-		boss.type = eType::boss;
-
-		Boss* sanae = new Boss(LeftEdge, TopEdge);
-		sanae->type = eType::boss;
-
-		sanae->onEvent = [&](float x, float y, int id) {
-			if (id == 1) { // 符卡展开
-				Game::Audio.play(L"spell");
-				Game::Effects.spawn(EffectType::SPELL_CUTIN, 0, 0, false);
-				Game::Effects.spawn(EffectType::SPELL_NAME, 0, 0, false);
-				Game::BG.setMode(BGMode::BOSS_SPELL);
-				Game::Barr.clearBarrage();
-			}
-			else if (id == 2) { // 阶段击破
-				Game::Audio.play(L"damage");
-				Game::Effects.spawn(EffectType::EXPLOSION, x, y);
-				Game::BG.setMode(BGMode::NORMAL);
-				EnemyManager::DropReq req = { x, y, 10 };
-				Game::E.dropQueue.push_back(req);
-				Game::Effects.clearSpellName();
-				Game::Barr.clearBarrage();
-			}
-			};
-		// phase1
-		{
-			BossPhase p1(
-				600,   // 血量
-				30000,  // 限时 30秒
-				Moves::bossEnter(80.0f), // 移动逻辑：飞到 Y=100 处悬停
-				false,
-				1,
-				2000
-			);
-			// phase1
-			//omega = 1.618 * 
-			p1.tasks.push_back(BarrageTask(
-				(int)bType::star_fall,
-				5000,     // interval 发射间隔 (越小线条越密集)                     
-				0.3f,      // speed 拉伸速度，控制线段变长的快慢                
-				162.0f,   // omega 大圆半径，5个星星离Boss多远                  
-				5,		  // num 5个星星                 
-				1500,     // r 悬停时间 1500ms                   
-				1,        // dir (未使用)                 
-				100,      // x0 星星半径，控制五角星大小                   
-				0,        // y0 (未使用)                  
-				0.02f,     // acc 抛射加速度，控制星星炸开的力度，0.1~0.2 之间效果最好                   
-				40,       // burstCount 总共画100笔，越多越细腻                 
-				15,       // burstInterval 每笔间隔10ms，作画总耗时 1秒
-				(int)BulletStyle::BLUE_
-			));
-			sanae->addPhase(p1);
-		}
-
-		// phase2
-		{
-			BossPhase p2(
-				600,
-				45000,
-				Moves::Stay(),
-				true,
-				1000
-			);
-			int left = CentralX - 200;
-			int right = CentralX + 200;
-			p2.tasks.push_back(BarrageTask((int)bType::windmill_st, 40, 3.0f, 20.3f, 1, 0, 1, left,
-				0, 0, 0, 0, (int)BulletStyle::RICE_BULE));
-			p2.tasks.push_back(BarrageTask((int)bType::windmill_st, 40, 3.0f, 20.3f, 1, 0, 0, right,
-				0, 0, 0, 0, (int)BulletStyle::RICE_BULE));
-			p2.tasks.push_back(BarrageTask((int)bType::pincer_aim, 800, 4.0f, 0, 1,
-				150, 1, 0, 0, 0, 1, 0, (int)BulletStyle::RED_));
-			sanae->addPhase(p2);
-		}
-
-		// phase3
-		BossPhase p3(
-			600,
-			45000,
-			Moves::StepLeftUp(3000, 200, 5, 5),
-			false,
-			0
-		);
-		p3.tasks.push_back(BarrageTask(
-			(int)bType::windmill_switching,
-			100,             // interval 发射间隔 (越小线条越密集)
-			3.0f,           // speed 子弹飞行速度
-			8.0f,           // omega 旋转角速度 (每发旋转4度)
-			8,              // num 几条旋臂 
-			200,              // 停顿
-			1,              // dir 初始方向 (1:顺时针)
-			0, 0,           // x0, y0
-			0,              // burstCount (未使用)
-			0,        // burstCount (unused)
-			1000,      // burstInterval (switch time, 3000ms)
-			(int)BulletStyle::RICE_BULE
-		));
-		p3.tasks.push_back(BarrageTask(
-			(int)bType::windmill_switching,
-			100,             // interval 发射间隔 
-			3.0f,           // speed 子弹飞行速度
-			8.0f,           // omega 旋转角速度 
-			8,              // num 几条旋臂 
-			200,              // 停顿
-			-1,              // dir 初始方向 
-			0, 0,           // x0, y0
-			0,              // burstCount (未使用)
-			0,        // burstCount (unused)
-			1000,      // burstInterval 
-			(int)BulletStyle::RICE_RED
-		));
-		sanae->addPhase(p3);
-		// phase4
-		{
-			BossPhase p4(
-				600,
-				45000,
-				Moves::MoveTo(CentralX, CentralY, 80.0f),
-				true
-			);
-
-			p4.tasks.push_back(BarrageTask((int)bType::firework, 500, 3.0f, 0, 24, 0, 0, 0, 0, 0, 0, 0, (int)BulletStyle::RICE_BULE));
-			p4.tasks.push_back(BarrageTask((int)bType::pincer_aim, 1500, 4.0f, 0, 2,
-				150, 1, 0, 0, 0.5f, 5, 80));
-			sanae->addPhase(p4);
-		}
-
-		// phase5
-		{
-			BossPhase p5(
-				600,
-				60000,
-				Moves::Stay(),
-				false,
-				1000
-			);
-			p5.tasks.push_back(BarrageTask(
-				(int)bType::star_fall,
-				5000,
-				0.5,
-				370.0f,
-				12,
-				1500,
-				1,
-				100,
-				0,
-				0.02f,
-				40,
-				15,
-				(int)BulletStyle::RED_
-			));
-			p5.tasks.push_back(BarrageTask(
-				(int)bType::star_fall,
-				5000,     // interval 发射间隔 (越小线条越密集)                     
-				0.3f,      // speed 拉伸速度，控制线段变长的快慢                
-				162.0f,   // omega 大圆半径，5个星星离Boss多远                  
-				5,		  // num 5个星星                 
-				1500,     // r 悬停时间 1500ms                   
-				1,        // dir (未使用)                 
-				100,      // x0 星星半径，控制五角星大小                   
-				0,        // y0 (未使用)                  
-				0.02f,     // acc 抛射加速度，控制星星炸开的力度，0.1~0.2 之间效果最好                   
-				40,       // burstCount 总共画100笔，越多越细腻                 
-				15,       // burstInterval 每笔间隔10ms，作画总耗时 1秒
-				(int)BulletStyle::BLUE_
-			));
-			sanae->addPhase(p5);
-		}
-
-		// phase6
-		{
-			BossPhase p6(
-				800,
-				45000,
-				Moves::MoveTo(CentralX, CentralY, 80.0f),
-				true,
-				1000
-			);
-			//p6.tasks.push_back(BarrageTask((int)bType::firework, 800, 1.5f, 0, 15, 0, 0, 0, 0, 0, 0, 0, (int)BulletStyle::BLUE_BIG));
-			p6.tasks.push_back(BarrageTask((int)bType::windmill, 350, 1.5f, 8, 6, 0, 0, 0, 0, 0, 1, 0, (int)BulletStyle::BLUE_BIG));
-			p6.tasks.push_back(BarrageTask((int)bType::windmill_st, 100, 3.0f, 15, 12));
-			sanae->addPhase(p6);
-		}
-		boss.bossInstance = sanae;
-		wBoss.events.push_back(boss);
-		waveQueue.push(wBoss);
-	}
+    AddSanaeBossWave(false);
 }
 
 void Game::InitAILevel() {
-	{
-		waveData wBoss;
-		wBoss.waveDelay = 2000;
-
-		SpawnEvent boss;
-		boss.startTime = 500;
-		boss.count = 1;
-		boss.interval = 0;
-		boss.type = eType::boss;
-
-		Boss* sanae = new Boss(LeftEdge, TopEdge);
-		sanae->type = eType::boss;
-
-		sanae->onEvent = [&](float x, float y, int id) {
-			if (id == 1) { // 符卡展开
-				Game::Audio.play(L"spell");
-				Game::Effects.spawn(EffectType::SPELL_CUTIN, 0, 0, false);
-				Game::Effects.spawn(EffectType::SPELL_NAME, 0, 0, false);
-				Game::BG.setMode(BGMode::BOSS_SPELL);
-				Game::Barr.clearBarrage();
-			}
-			else if (id == 2) { // 阶段击破
-				Game::Audio.play(L"damage");
-				Game::Effects.spawn(EffectType::EXPLOSION, x, y);
-				Game::BG.setMode(BGMode::NORMAL);
-				EnemyManager::DropReq req = { x, y, 10 };
-				Game::E.dropQueue.push_back(req);
-				Game::Effects.clearSpellName();
-				Game::Barr.clearBarrage();
-			}
-			};
-		// phase1
-		{
-			BossPhase p1(
-				600,     // 血量
-				30000,   // 限时 30秒
-				Moves::bossEnter(80.0f), // 移动逻辑：飞到 Y=100 处悬停
-				false,
-				1,
-				2000
-			);
-			// phase1
-			//omega = 1.618 * 
-			p1.tasks.push_back(BarrageTask(
-				(int)bType::star_fall,
-				5000,     // interval 发射间隔 (越小线条越密集)                     
-				0.3f,     // speed 拉伸速度，控制线段变长的快慢                
-				162.0f,   // omega 大圆半径，5个星星离Boss多远                  
-				5,		  // num 5个星星                 
-				1500,     // r 悬停时间 1500ms                   
-				1,        // dir (未使用)                 
-				100,      // x0 星星半径，控制五角星大小                   
-				0,        // y0 (未使用)                  
-				0.02f,    // acc 抛射加速度，控制星星炸开的力度，0.1~0.2 之间效果最好                   
-				40,       // burstCount 总共画100笔，越多越细腻                 
-				15,       // burstInterval 每笔间隔10ms，作画总耗时 1秒
-				(int)BulletStyle::BLUE_
-			));
-			sanae->addPhase(p1);
-		}
-
-		// phase2
-		{
-			BossPhase p2(
-				600,
-				45000,
-				Moves::Stay(),
-				true,
-				1000
-			);
-			int left = CentralX - 200;
-			int right = CentralX + 200;
-			p2.tasks.push_back(BarrageTask((int)bType::windmill_st, 40, 3.0f, 20.3f, 1, 0, 1, left,
-				0, 0, 0, 0, (int)BulletStyle::RICE_BULE));
-			p2.tasks.push_back(BarrageTask((int)bType::windmill_st, 40, 3.0f, 20.3f, 1, 0, 0, right,
-				0, 0, 0, 0, (int)BulletStyle::RICE_BULE));
-			p2.tasks.push_back(BarrageTask((int)bType::pincer_aim, 800, 4.0f, 0, 1,
-				150, 1, 0, 0, 0, 1, 0, (int)BulletStyle::RED_));
-			sanae->addPhase(p2);
-		}
-
-		// phase3
-		BossPhase p3(
-			600,
-			45000,
-			Moves::StepLeftUp(3000, 200, 5, 5),
-			false,
-			0
-		);
-		p3.tasks.push_back(BarrageTask(
-			(int)bType::windmill_switching,
-			100,             // interval 发射间隔 (越小线条越密集)
-			3.0f,           // speed 子弹飞行速度
-			8.0f,           // omega 旋转角速度 (每发旋转4度)
-			8,              // num 几条旋臂 
-			200,              // 停顿
-			1,              // dir 初始方向 (1:顺时针)
-			0, 0,           // x0, y0
-			0,              // burstCount (未使用)
-			0,        // burstCount (unused)
-			1000,      // burstInterval (switch time, 3000ms)
-			(int)BulletStyle::RICE_BULE
-		));
-		p3.tasks.push_back(BarrageTask(
-			(int)bType::windmill_switching,
-			100,             // interval 发射间隔 
-			3.0f,           // speed 子弹飞行速度
-			8.0f,           // omega 旋转角速度 
-			8,              // num 几条旋臂 
-			200,              // 停顿
-			-1,              // dir 初始方向 
-			0, 0,           // x0, y0
-			0,              // burstCount (未使用)
-			0,              // burstCount (unused)
-			1000,      // burstInterval 
-			(int)BulletStyle::RICE_RED
-		));
-		sanae->addPhase(p3);
-		// phase4
-		{
-			BossPhase p4(
-				600,
-				45000,
-				Moves::MoveTo(CentralX, CentralY, 80.0f),
-				true
-			);
-
-			p4.tasks.push_back(BarrageTask((int)bType::firework, 500, 3.0f, 0, 24, 0, 0, 0, 0, 0, 0, 0, (int)BulletStyle::RICE_BULE));
-			p4.tasks.push_back(BarrageTask((int)bType::pincer_aim, 800, 4.0f, 0, 2,
-				150, 1, 0, 0, 0.5f, 1, 80));
-			sanae->addPhase(p4);
-		}
-
-		// phase5
-		{
-			BossPhase p5(
-				600,
-				60000,
-				Moves::Stay(),
-				false,
-				1000
-			);
-			p5.tasks.push_back(BarrageTask(
-				(int)bType::star_fall,
-				5000,
-				0.5,
-				370.0f,
-				12,
-				1500,
-				1,
-				100,
-				0,
-				0.02f,
-				40,
-				15,
-				(int)BulletStyle::RED_
-			));
-			p5.tasks.push_back(BarrageTask(
-				(int)bType::star_fall,
-				5000,     // interval 发射间隔 (越小线条越密集)                     
-				0.3f,     // speed 拉伸速度，控制线段变长的快慢                
-				162.0f,   // omega 大圆半径，5个星星离Boss多远                  
-				5,		  // num 5个星星                 
-				3000,     // r 悬停时间 3000ms                   
-				1,        // dir (未使用)                 
-				100,      // x0 星星半径，控制五角星大小                   
-				0,        // y0 (未使用)                  
-				0.02f,    // acc 抛射加速度，控制星星炸开的力度，0.1~0.2 之间效果最好                   
-				40,       // burstCount 总共画100笔，越多越细腻                 
-				15,       // burstInterval 每笔间隔10ms，作画总耗时 1秒
-				(int)BulletStyle::BLUE_
-			));
-			sanae->addPhase(p5);
-		}
-
-		// phase6
-		{
-			BossPhase p6(
-				800,
-				45000,
-				Moves::MoveTo(CentralX, CentralY, 80.0f),
-				true,
-				1000
-			);
-			//p6.tasks.push_back(BarrageTask((int)bType::firework, 800, 1.5f, 0, 15, 0, 0, 0, 0, 0, 0, 0, (int)BulletStyle::BLUE_BIG));
-			p6.tasks.push_back(BarrageTask((int)bType::windmill, 350, 1.5f, 8, 6, 0, 0, 0, 0, 0, 1, 0, (int)BulletStyle::BLUE_BIG));
-			p6.tasks.push_back(BarrageTask((int)bType::windmill_st, 100, 3.0f, 15, 12));
-			sanae->addPhase(p6);
-		}
-		boss.bossInstance = sanae;
-		wBoss.events.push_back(boss);
-		waveQueue.push(wBoss);
-	}
+    AddSanaeBossWave(true);
 }
 
+void Game::AddSanaeBossWave(bool aiMode) {
+    waveData waveBoss;
+    waveBoss.waveDelay = 2000;
+
+    SpawnEvent bossEvent;
+    bossEvent.startTime = 500;
+    bossEvent.count = 1;
+    bossEvent.interval = 0;
+    bossEvent.type = eType::boss;
+    bossEvent.bossInstance = CreateSanaeBoss(aiMode);
+    waveBoss.events.push_back(bossEvent);
+    waveQueue.push(waveBoss);
+}
+
+void Game::ClearQueuedWaves() {
+    // waveQueue 尚未交给 EnemyManager 的 Boss 由这里拥有；模式切换时必须一并释放。
+    std::set<Boss*> queuedBosses;
+    while (!waveQueue.empty()) {
+        waveData wave = waveQueue.front();
+        waveQueue.pop();
+        for (const auto& event : wave.events) {
+            if (event.bossInstance != nullptr) queuedBosses.insert(event.bossInstance);
+        }
+    }
+    for (Boss* boss : queuedBosses) delete boss;
+    nextWave = waveData();
+}
+
+Boss* Game::CreateSanaeBoss(bool aiMode) {
+    // aiMode 只决定入口；普通模式和 AI 演示故意装配完全相同的阶段。
+    (void)aiMode;
+    Boss* sanae = new Boss((float)LeftEdge, (float)TopEdge);
+    sanae->type = eType::boss;
+    sanae->onEvent = [this](float x, float y, int id) {
+        if (id == 1) {
+            Audio.play(L"spell");
+            Effects.spawn(EffectType::SPELL_CUTIN, 0, 0, false);
+            Effects.spawn(EffectType::SPELL_NAME, 0, 0, false);
+            BG.setMode(BGMode::BOSS_SPELL);
+            Barr.clearBarrage();
+        }
+        else if (id == 2) {
+            Audio.play(L"damage");
+            Effects.spawn(EffectType::EXPLOSION, x, y);
+            BG.setMode(BGMode::NORMAL);
+            E.dropQueue.push_back({ x, y, 10 });
+            Effects.clearSpellName();
+            Barr.clearBarrage();
+        }
+    };
+    AddSanaeBasePhases(*sanae);
+    AddSanaeAdvancedPhases(*sanae);
+    return sanae;
+}
+
+void Game::AddSanaeBasePhases(Boss& sanae) {
+    BossPhase p1(600, 30000, Moves::bossEnter(80.0f), false, 1, 2000);
+    p1.tasks.push_back(BarrageTask((int)bType::star_fall, 5000, 0.3f, 162.0f, 5,
+        1500, 1, 100, 0, 0.02f, 40, 15, (int)BulletStyle::BLUE_));
+    sanae.addPhase(p1);
+
+    BossPhase p2(600, 45000, Moves::Stay(), true, 1000);
+    p2.tasks.push_back(BarrageTask((int)bType::windmill_st, 40, 3.0f, 20.3f, 1,
+        0, 1, CentralX - 200, 0, 0, 1, 0, (int)BulletStyle::RICE_BULE));
+    p2.tasks.push_back(BarrageTask((int)bType::windmill_st, 40, 3.0f, 20.3f, 1,
+        0, -1, CentralX + 200, 0, 0, 1, 0, (int)BulletStyle::RICE_BULE));
+    p2.tasks.push_back(BarrageTask((int)bType::pincer_aim, 800, 4.0f, 0.0f, 1,
+        150, 1, 0, 0, 0.0f, 1, 0, (int)BulletStyle::RED_));
+    sanae.addPhase(p2);
+
+    BossPhase p3(600, 45000, Moves::StepLeftUp(3000, 200, 5.0f, 5.0f), false, 0);
+    p3.tasks.push_back(BarrageTask((int)bType::windmill_switching, 100, 3.0f, 8.0f, 8,
+        200, 1, 0, 0, 0.0f, 0, 1000, (int)BulletStyle::RICE_BULE));
+    p3.tasks.push_back(BarrageTask((int)bType::windmill_switching, 100, 3.0f, 8.0f, 8,
+        200, -1, 0, 0, 0.0f, 0, 1000, (int)BulletStyle::RICE_RED));
+    sanae.addPhase(p3);
+
+    BossPhase p4(600, 45000, Moves::MoveTo(CentralX, CentralY, 80.0f), true, 1000);
+    p4.tasks.push_back(BarrageTask((int)bType::firework, 500, 3.0f, 0.0f, 24,
+        0, 1, 0, 0, 0.0f, 1, 0, (int)BulletStyle::RICE_BULE));
+    p4.tasks.push_back(BarrageTask((int)bType::pincer_aim, 1500, 4.0f, 0.0f, 2,
+        150, 1, 0, 0, 0.5f, 1, 80, (int)BulletStyle::RED_));
+    sanae.addPhase(p4);
+
+    BossPhase p5(600, 60000, Moves::Stay(), false, 1000);
+    p5.tasks.push_back(BarrageTask((int)bType::star_fall, 5000, 0.5f, 370.0f, 12,
+        1500, 1, 100, 0, 0.02f, 40, 15, (int)BulletStyle::RED_));
+    p5.tasks.push_back(BarrageTask((int)bType::star_fall, 5000, 0.3f, 162.0f, 5,
+        1500, 1, 100, 0, 0.02f, 40, 15, (int)BulletStyle::BLUE_));
+    sanae.addPhase(p5);
+
+    BossPhase p6(800, 45000, Moves::MoveTo(CentralX, CentralY, 80.0f), true, 1000);
+    p6.tasks.push_back(BarrageTask((int)bType::windmill, 350, 1.5f, 8.0f, 6,
+        0, 1, 0, 0, 0.0f, 1, 0, (int)BulletStyle::BLUE_BIG));
+    p6.tasks.push_back(BarrageTask((int)bType::windmill_st, 100, 3.0f, 15.0f, 12,
+        0, 1, 0, 0, 0.0f, 1, 0, (int)BulletStyle::GREEN_));
+    sanae.addPhase(p6);
+}
+
+void Game::AddSanaeAdvancedPhases(Boss& sanae) {
+    // Phase 7：风符「双旋翠岚」，两组独立 task.currentAngle 的曲线花瓣。
+    BossPhase p7(750, 42000,
+        [](Enemy* enemy, int timePassed) {
+            enemy->x = CentralX + 150.0f * sin(timePassed * 0.00135f);
+            enemy->y = TopEdge + 165.0f;
+        }, false, 0);
+    BarrageTask bluePetal((int)bType::curved_petal, 2300, 2.45f, 11.0f, 10,
+        950, 1, 0, 0, 0.0105f, 6, 85, (int)BulletStyle::BLUE_);
+    bluePetal.currentAngle = -11.0f; // 第一次发射从 0 度开始。
+    BarrageTask redPetal((int)bType::curved_petal, 2300, 2.45f, 11.0f, 10,
+        950, -1, 0, 0, 0.0105f, 6, 85, (int)BulletStyle::RED_);
+    redPetal.currentAngle = 29.0f;   // 更新 -11 度后首圈为 +18 度偏移。
+    p7.tasks.push_back(bluePetal);
+    p7.tasks.push_back(redPetal);
+    // 低频镜像风墙只作为阶段提示；左右内沿始终由 Barrage 保留 42px 安全通道。
+    BarrageTask windWall((int)bType::mirror_sine_wall, 5200, 2.25f, 0.058f, 10,
+        88, 1, 0, 0, 0.32f, 1, 0, (int)BulletStyle::GREEN_);
+    windWall.startDelay = 1150;
+    p7.tasks.push_back(windWall);
+    sanae.addPhase(p7);
+
+    // Phase 8：奇迹「星环再定向」，每颗只保存一次自机坐标快照。
+    BossPhase p8(800, 45000, Moves::MoveTo(CentralX, TopEdge + 150, 12.0f), true, 1001);
+    BarrageTask brakeRing((int)bType::brake_aim_ring, 3400, 3.1f, 7.5f, 30,
+        950, 1, 0, 0, 0.075f, 3, 170, (int)BulletStyle::BLUE_);
+    p8.tasks.push_back(brakeRing);
+    sanae.addPhase(p8);
+
+    // Phase 9：秘术「万华天穹」。红环 700ms、花瓣 1100ms 后启动，和蓝环错开。
+    BossPhase p9(1000, 55000, Moves::MoveTo(CentralX, TopEdge + 160, 10.0f), true, 1002);
+    BarrageTask blueOrbit((int)bType::orbit_release, 3000, 3.15f, 0.045f, 32,
+        900, 1, 0, 0, 0.20f, 2, 150, (int)BulletStyle::BLUE_);
+    BarrageTask redOrbit((int)bType::orbit_release, 3400, 2.85f, 0.040f, 24,
+        1100, -1, 0, 0, 0.16f, 2, 180, (int)BulletStyle::RED_);
+    redOrbit.startDelay = 700;
+    BarrageTask finishingPetal((int)bType::curved_petal, 4700, 2.15f, 9.0f, 8,
+        800, 1, 0, 0, 0.0080f, 3, 110, (int)BulletStyle::GREEN_);
+    finishingPetal.currentAngle = -9.0f;
+    finishingPetal.startDelay = 1100;
+    p9.tasks.push_back(blueOrbit);
+    p9.tasks.push_back(redOrbit);
+    p9.tasks.push_back(finishingPetal);
+    sanae.addPhase(p9);
+}
 void Game::HeroControl() {
 	Hero.draw();
 	Hero.move();
@@ -705,9 +476,8 @@ void Game::InitBarrageHandlers() {
 
 	// windmill_st 通过 task 引用直接修改 currentAngle，保证状态在连发间正确累积
 	barrageHandlers[bType::windmill_st] = [this](BarrageTask& task, Enemy& en, int x, int y, int cx, int cy, BulletStyle style, float currentSpeed, DWORD now) {
-		constexpr float extraShift = 1.2f;
-		task.currentAngle += (task.omega + extraShift);
-		Barr.straightMill(en, task.speed, (int)task.currentAngle, task.num, x, y, 1, style);
+		task.currentAngle += task.omega * task.dir;
+		Barr.straightMill(en, task.speed, task.currentAngle, task.num, x, y, 1, style);
 	};
 
 	barrageHandlers[bType::firework] = [this](BarrageTask& task, Enemy& en, int x, int y, int cx, int cy, BulletStyle style, float currentSpeed, DWORD now) {
@@ -719,7 +489,8 @@ void Game::InitBarrageHandlers() {
 	};
 
 	barrageHandlers[bType::windmill] = [this](BarrageTask& task, Enemy& en, int x, int y, int cx, int cy, BulletStyle style, float currentSpeed, DWORD now) {
-		Barr.straightMill2(en, task.speed, (int)task.omega, task.num, x, y, 1, style);
+		task.currentAngle += task.omega * task.dir;
+		Barr.straightMill2(en, task.speed, task.currentAngle, task.num, x, y, 1, style);
 	};
 
 	// pincer_aim 通过捕获 this 访问 Hero 的实时坐标
@@ -737,6 +508,28 @@ void Game::InitBarrageHandlers() {
 		if (releaseTime < now) releaseTime = now;
 		Barr.fiveStar(en, task.currentBurst, task.burstCount, task.omega,
 			(float)task.x0, task.speed, task.acc, releaseTime, task.num, cx, cy, style);
+	};
+
+	// 曲线花瓣的基础角由各自任务保存，蓝/红两组以及不同 Boss 不会共享旋转状态。
+	barrageHandlers[bType::curved_petal] = [this](BarrageTask& task, Enemy& en, int x, int y, int cx, int cy, BulletStyle style, float currentSpeed, DWORD now) {
+		task.currentAngle += task.omega * task.dir;
+		Barr.curvedPetal(en, task.speed, task.currentAngle, task.num, (DWORD)task.r, task.dir, task.acc, x, y, style);
+	};
+
+	barrageHandlers[bType::brake_aim_ring] = [this](BarrageTask& task, Enemy& en, int x, int y, int cx, int cy, BulletStyle style, float currentSpeed, DWORD now) {
+		task.currentAngle += task.omega * task.dir;
+		// 仅在发射这一刻读取 Hero，子弹内部保存快照后不再追踪。
+		Barr.brakeAimRing(en, Hero.x, Hero.y, task.speed, task.currentAngle, task.num,
+			(DWORD)task.r, task.acc, x, y, style);
+	};
+
+	barrageHandlers[bType::mirror_sine_wall] = [this](BarrageTask& task, Enemy& en, int x, int y, int cx, int cy, BulletStyle style, float currentSpeed, DWORD now) {
+		Barr.mirrorSineWall(en, task.speed, task.omega, task.num, (float)task.r, task.dir, task.acc, x, y, style);
+	};
+
+	barrageHandlers[bType::orbit_release] = [this](BarrageTask& task, Enemy& en, int x, int y, int cx, int cy, BulletStyle style, float currentSpeed, DWORD now) {
+		// cx/cy 为此波生成时的 Boss 中心快照，后续 Boss 移动不会拖动环绕弹。
+		Barr.orbitRelease(en, task.speed, task.omega, task.num, (DWORD)task.r, task.dir, task.acc, cx, cy, style);
 	};
 }
 
@@ -775,7 +568,7 @@ void Game::Barrages() {
 					}
 				}
 				else if (task.currentBurst == 1) {
-					if (now - task.lastBurstTime >= task.r) {
+					if ((DWORD)(now - task.lastBurstTime) >= (DWORD)task.r) {
 						task.currentBurst = 0;    
 						task.lastBurstTime = now;
 						task.dir *= -1;          
@@ -801,7 +594,11 @@ void Game::Barrages() {
 
 			if (!shouldFire) continue;
 
-			float currentSpeed = task.speed - (task.currentBurst * task.acc);
+			const bType taskType = (bType)task.type;
+			const bool motionUsesAcc = taskType == bType::curved_petal ||
+				taskType == bType::brake_aim_ring || taskType == bType::mirror_sine_wall ||
+				taskType == bType::orbit_release;
+			float currentSpeed = motionUsesAcc ? task.speed : task.speed - (task.currentBurst * task.acc);
 			if (currentSpeed < 0.5f) currentSpeed = 0.5f;
 
 			int x = (task.x0 == 0) ? centerX : task.x0;
@@ -1269,6 +1066,7 @@ void Game::DrawMainMenu() {
 	const int btnX = (screenWidth - btnWidth) / 2;
 	const int btn1Y = 300;
 	const int btn2Y = 380;
+	const int btn3Y = 460;
 
 	int mouseX = menuCursorX;
 	int mouseY = menuCursorY;
@@ -1301,6 +1099,19 @@ void Game::DrawMainMenu() {
 	wchar_t btn2Text[] = L"AI 演示";
 	int btn2TextWidth = textwidth(btn2Text);
 	outtextxy(btnX + (btnWidth - btn2TextWidth) / 2, btn2Y + 10, btn2Text);
+
+	// 绘制按钮3：RL训练
+	bool hover3 = (mouseX >= btnX && mouseX <= btnX + btnWidth &&
+		mouseY >= btn3Y && mouseY <= btn3Y + btnHeight);
+	setfillcolor(hover3 ? RGB(220, 180, 80) : RGB(170, 120, 40));
+	solidrectangle(btnX, btn3Y, btnX + btnWidth, btn3Y + btnHeight);
+	setlinecolor(WHITE);
+	rectangle(btnX, btn3Y, btnX + btnWidth, btn3Y + btnHeight);
+
+	settextcolor(WHITE);
+	wchar_t btn3Text[] = L"RL 训练";
+	int btn3TextWidth = textwidth(btn3Text);
+	outtextxy(btnX + (btnWidth - btn3TextWidth) / 2, btn3Y + 10, btn3Text);
 }
 
 void Game::HandleMenuInput() {
@@ -1310,6 +1121,7 @@ void Game::HandleMenuInput() {
 	const int btnX = (screenWidth - btnWidth) / 2;
 	const int btn1Y = 300;
 	const int btn2Y = 380;
+	const int btn3Y = 460;
 
 	ExMessage msg;
 	while (peekmessage(&msg, EM_MOUSE)) {
@@ -1334,6 +1146,13 @@ void Game::HandleMenuInput() {
 			currentState = GameState::AI_DEMO;
 			return;
 		}
+
+		if (mouseX >= btnX && mouseX <= btnX + btnWidth &&
+			mouseY >= btn3Y && mouseY <= btn3Y + btnHeight) {
+			InitRLTraining();
+			currentState = GameState::RL_TRAINING;
+			return;
+		}
 	}
 }
 
@@ -1355,9 +1174,7 @@ void Game::InitNormalPlay() {
 	// 清空符卡弹幕
 	ClearSpellBarrages();
 	// 重置关卡队列
-	while (!waveQueue.empty()) {
-		waveQueue.pop();
-	}
+	ClearQueuedWaves();
 	currentWave.clear();
 	InitNormalLevels();
 	// 重置其他状态
@@ -1368,6 +1185,85 @@ void Game::InitNormalPlay() {
 	// 重新初始化背景和音效
 	BG.init();
 	Effects.init();
+}
+
+void Game::InitRLTraining() {
+	// 进入 RL 训练时清空普通关卡和 AI 演示遗留对象，只保留训练服务需要的场景。
+	E.clearEnemy();
+	for (auto* bullet : B.bulletList) {
+		delete bullet;
+	}
+	B.bulletList.clear();
+	Barr.clearBarrage();
+	for (auto* item : items) {
+		delete item;
+	}
+	items.clear();
+	ClearSpellBarrages();
+	ClearQueuedWaves();
+	currentWave.clear();
+
+	enemyFire = false;
+	wait = false;
+	isSpellActive = false;
+	BG.init();
+	Effects.init();
+
+	if (aiController) {
+		aiController->Close();
+		delete aiController;
+		aiController = nullptr;
+	}
+	if (aiProcessHandle != NULL) {
+		TerminateProcess(aiProcessHandle, 0);
+		CloseHandle(aiProcessHandle);
+		aiProcessHandle = NULL;
+	}
+	if (rlTrainingServer) {
+		delete rlTrainingServer;
+		rlTrainingServer = nullptr;
+	}
+
+	// C++ 作为 Gym 环境服务端，Python 训练脚本通过 UDP 9090 请求 reset/step。
+	rlTrainingServer = new RLTrainingServer(&Hero, &E, &Barr.barrList);
+	if (!rlTrainingServer->Init(9090)) {
+		std::cerr << "[Game] RL training server failed to start" << std::endl;
+	}
+	else {
+		std::cout << "[Game] RL training mode is ready" << std::endl;
+	}
+}
+
+void Game::HandleRLTraining() {
+	// 训练模式主循环只负责展示状态和维护窗口；环境推进由 RLTrainingServer 响应 Python 请求触发。
+	BG.update();
+	BG.draw();
+
+	setbkmode(TRANSPARENT);
+	settextstyle(30, 0, L"微软雅黑", 0, 0, FW_BOLD, false, false, false);
+	settextcolor(YELLOW);
+	outtextxy(50, 50, L"RL Training Mode");
+
+	settextstyle(20, 0, L"微软雅黑", 0, 0, FW_NORMAL, false, false, false);
+	settextcolor(WHITE);
+	outtextxy(50, 95, L"UDP 9090 等待 Python reset/step");
+	outtextxy(50, 125, L"运行 train_sterile.py 开始训练");
+	outtextxy(50, 155, L"按 ESC 返回主菜单");
+
+	if (!rlTrainingServer || !rlTrainingServer->IsRunning()) {
+		settextcolor(RED);
+		outtextxy(50, 190, L"训练服务未运行，检查端口是否被占用");
+	}
+
+	// ESC 退出时销毁训练服务，释放 9090 端口，避免下次进入时 bind 失败。
+	if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
+		if (rlTrainingServer) {
+			delete rlTrainingServer;
+			rlTrainingServer = nullptr;
+		}
+		currentState = GameState::MAIN_MENU;
+		Sleep(200);
+	}
 }
 
 void Game::InitAIDemo() {
@@ -1388,9 +1284,7 @@ void Game::InitAIDemo() {
 	// 清空符卡弹幕
 	ClearSpellBarrages();
 	// 清空关卡队列
-	while (!waveQueue.empty()) {
-		waveQueue.pop();
-	}
+	ClearQueuedWaves();
 	currentWave.clear();
 	InitAILevel();
 	// 重置状态

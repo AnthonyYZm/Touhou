@@ -68,7 +68,7 @@ void Bullet::createBullet(Hero* hero, int type, const std::vector<Enemy*>& enemi
             float hy = hero->y - 10.0f - offsetDistance - offset;
             int p = hero->getPower();
             // 单发
-            if (p > 30) {
+            if (p < 30) {
                 Bullet* b = new Bullet(hx, hy);
                 b->setVelocity(0, -b->speed);
                 b->alive = true;

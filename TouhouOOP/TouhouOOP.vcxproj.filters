@@ -54,6 +54,15 @@
     <ClCompile Include="AIController.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="RLEnvironment.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="RLState.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="RLTrainingServer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Role.h">
@@ -101,10 +110,25 @@
     <ClInclude Include="AIController.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="RLstate.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="RLEnvironment.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="RLTrainingServer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <None Include="touhou_env.py">
+      <Filter>资源文件</Filter>
+    </None>
     <None Include="ai_server.py">
-      <Filter>源文件</Filter>
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="train_sterile.py">
+      <Filter>资源文件</Filter>
     </None>
   </ItemGroup>
 </Project>

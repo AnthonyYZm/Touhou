@@ -20,6 +20,7 @@ struct BarrageTask {
     float currentAngle;  // 当前角度 (用于旋转类弹幕)
     DWORD lastBurstTime; // 上一发时间
     int style;           // 弹幕样式
+    int startDelay;      // 阶段开始后的首次发射延迟，用于错开不同弹幕周期
 
     BarrageTask(int _type, int _interval, float _speed, float _omega, int _num, int _r = 0, 
         int _dir = 1, int _x = 0, int _y = 0, float _acc = 0.0f, 
@@ -40,6 +41,7 @@ struct BarrageTask {
         lastBurstTime = 0;
 		currentAngle = 0.0f;
 		style = _style;
+        startDelay = 0;
     }
 };
 

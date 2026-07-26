@@ -13,7 +13,23 @@ enum class bType : int {
 	pincer_rain,
 	star_fall,
 	windmill_switching,
-	windmill
+	windmill,
+	curved_petal,
+	brake_aim_ring,
+	mirror_sine_wall,
+	orbit_release
+};
+
+// 子弹运动状态。保留原有直线、环绕和延迟加速表现，并为高级弹幕提供明确语义。
+enum class BulletMotion {
+	LINEAR,
+	ORBIT,
+	EXPANDING_ORBIT,
+	DELAYED_ACCELERATION,
+	CURVE_THEN_STRAIGHT,
+	BRAKE_THEN_AIM,
+	ORBIT_THEN_RELEASE,
+	SINE_WAVE
 };
 
 enum class BulletStyle {
@@ -34,12 +50,24 @@ private:
 	float speed;
 	float rSpeed;
 	float radian;	
-	float currentAngle;
 	float vx, vy;	
-	int moveType;
-	float omega;
+	BulletMotion motion;
+	// 新运动的生命周期状态：时间均以 bornTime 为基准，避免 TickCount 回绕比较问题。
+	DWORD bornTime;
+	DWORD switchDelay;
+	int motionPhase;
+	float motionAngle;
+	float motionSpeed;
+	float turnRate;
+	float deceleration;
+	float targetX, targetY;
+	float originX, originY;
+	float travelled;
+	float waveAmplitude;
+	float waveFrequency;
+	float releaseSpeed;
+	float radiusGrowth;
 	float radius;
-	float centerX, centerY;
 	static const int darkGreenWidth;
 	static const int darkGreenHeight;
 	static const int riceWidth;
@@ -59,6 +87,7 @@ private:
 	static int globalGroupID;
 	int groupID;
 	BulletStyle style;	
+	bool appendBullet(Barrage* bullet);
 
 public:
 
@@ -71,14 +100,19 @@ public:
 
 	void Normal(Enemy& e, float speed, BulletStyle s);
 	void randomRain(float speed, BulletStyle s);
-	void straightMill(Enemy& e, float speed, int omega, int num, int x0, int y0, int dir, BulletStyle s = BulletStyle::GREEN_);
-	void straightMill2(Enemy& e, float speed, int omega, int num, int x0, int y0, int dir, BulletStyle s = BulletStyle::GREEN_);
+	void straightMill(Enemy& e, float speed, float baseAngle, int num, int x0, int y0, int dir, BulletStyle s = BulletStyle::GREEN_);
+	void straightMill2(Enemy& e, float speed, float baseAngle, int num, int x0, int y0, int dir, BulletStyle s = BulletStyle::GREEN_);
 	void fireWork(Enemy& e, float speed, int num, int x0, int y0, BulletStyle s = BulletStyle::GREEN_);
 	void circleMill(Enemy& e, float speed, int r, int num, int x0, int y0, BulletStyle s = BulletStyle::GREEN_);
 	void pincerAim(Enemy& e, float targetX, float targetY, float speed, int spacing, int pairNum, int x0, int y0, BulletStyle s = BulletStyle::GREEN_);
 	void fiveStar(Enemy& e, int currentStep, int totalSteps, float R_orbit, float r_star, float stretchSpeed, float normalAcc, 
 		DWORD releaseTime, int starCount, int x0, int y0, BulletStyle s = BulletStyle::GREEN_);
 	void directionalMill(Enemy& e, float speed, float baseAngle, int num, int x0, int y0, int dir, BulletStyle s = BulletStyle::GREEN_);
+	// 曲线花瓣、定向刹停环、镜像正弦风墙和环绕切向释放。
+	void curvedPetal(Enemy& e, float speed, float baseAngle, int num, DWORD curveTime, int dir, float turnRate, int x0, int y0, BulletStyle s = BulletStyle::GREEN_);
+	void brakeAimRing(Enemy& e, float targetX, float targetY, float speed, float baseAngle, int num, DWORD waitTime, float deceleration, int x0, int y0, BulletStyle s = BulletStyle::GREEN_);
+	void mirrorSineWall(Enemy& e, float speed, float frequency, int perSide, float amplitude, int dir, float downwardDrift, int x0, int y0, BulletStyle s = BulletStyle::GREEN_);
+	void orbitRelease(Enemy& e, float speed, float angularSpeed, int num, DWORD orbitTime, int dir, float radiusGrowth, int x0, int y0, BulletStyle s = BulletStyle::GREEN_);
 	
 	void update();
 	void reset();

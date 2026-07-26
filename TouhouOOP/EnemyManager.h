@@ -65,7 +65,14 @@ public:
 	int getEnemyCount() const { return (int)enemyList.size(); }
 
 	void clearList() {
+		for (auto enemy : enemyList) {
+			delete enemy;
+		}
 		enemyList.clear();
+	}
+
+	void addEnemy(Enemy* newEnemy) {
+		enemyList.push_back(newEnemy);
 	}
 
 	struct DropReq {

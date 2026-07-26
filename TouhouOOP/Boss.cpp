@@ -24,7 +24,11 @@ void Boss::loadCurrentPhase() {
     phaseStartTime = GetTickCount();
     this->ClearTasks();
     // 加载新弹幕
-    for (auto& task : p.tasks) {
+    for (auto task : p.tasks) {
+        // 以本阶段的起点和等待演出时间初始化，避免任务沿用上个阶段的绝对时间。
+        task.lastTime = phaseStartTime + p.waitTime - task.interval + task.startDelay;
+        task.lastBurstTime = 0;
+        task.currentBurst = 0;
         this->AddTask(task);
     }
     // 重置血量

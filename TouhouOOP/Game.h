@@ -1,5 +1,7 @@
 #pragma once
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include "Library.h"
 #include "Role.h"
 #include "Hero.h"
@@ -13,6 +15,7 @@
 #include "Effect.h"
 #include "Background.h"
 #include "AIController.h"
+#include "RLTrainingServer.h"
 #include <imm.h>
 #pragma comment(lib, "imm32.lib")
 #include <functional>
@@ -22,7 +25,8 @@
 enum class GameState {
 	MAIN_MENU,    // 主菜单
 	NORMAL_PLAY,  // 普通模式
-	AI_DEMO       // AI演示模式
+	AI_DEMO,      // AI演示模式
+	RL_TRAINING
 };
 
 // 弹幕处理函数的统一签名
@@ -68,6 +72,7 @@ class Game {
 
 	// AI 控制器
 	AIController* aiController;
+	RLTrainingServer* rlTrainingServer;
 	HANDLE aiProcessHandle = NULL;
 	std::unordered_map<bType, BarrageHandler, bTypeHash> barrageHandlers; // 弹幕分发表
 
@@ -80,6 +85,12 @@ class Game {
 	void mapWindowToGame(int winX, int winY, int& gameX, int& gameY);
 	// 每帧将离屏缓冲等比缩放输出到窗口
 	void presentScaled();
+	// Sanae 的普通关与 AI 演示共用同一套 Boss 阶段定义。
+	Boss* CreateSanaeBoss(bool aiMode);
+	void AddSanaeBasePhases(Boss& boss);
+	void AddSanaeAdvancedPhases(Boss& boss);
+	void AddSanaeBossWave(bool aiMode);
+	void ClearQueuedWaves();
 
 public:
 
@@ -115,6 +126,8 @@ public:
 	void InitNormalPlay();    // 初始化普通模式
 	void InitAIDemo();        // 初始化AI演示模式
 	void HandleAIDemo();      // AI演示模式主逻辑
+	void InitRLTraining();
+	void HandleRLTraining();
 	
 	// Åö×²¼ì²â
 	bool checkCircleCollide(float x1, float y1, float r1, float x2, float y2, float r2) {
