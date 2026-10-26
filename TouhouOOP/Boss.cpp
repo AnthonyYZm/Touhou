@@ -66,11 +66,15 @@ void Boss::move() {
     DWORD now = GetTickCount();
     int timePassed = now - phaseStartTime;
     int t = now - phaseStartTime;
-    if (t < currentP.waitTime) this->fire = false;
-    else this->fire = true;
     if (currentP.moveLogic) {
         currentP.moveLogic(this, timePassed);
     }
+    // 运动策略决定平移期间是否可开火；阶段等待时间始终拥有更高优先级。
+    if (t < currentP.waitTime) this->fire = false;
+    // Boss 无论使用哪一种策略，都不能进入玩家通常活动的下半屏。
+    const float bossMargin = 70.0f;
+    x = (std::max)(LeftEdge + bossMargin, (std::min)(LeftEdge + WIDTH - bossMargin, x));
+    y = (std::max)(TopEdge + 70.0f, (std::min)(TopEdge + 240.0f, y));
     // 条件 A: 击破
     // 条件 B: 超时
     if (hp <= 0 || timePassed >= currentP.duration) {

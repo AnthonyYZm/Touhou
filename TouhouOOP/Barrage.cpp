@@ -169,6 +169,14 @@ void Barrage::draw() {
         putimagePNG((int)(x - drawW / 2), (int)(y - drawH / 2), 256, 256, &mxtsSpell, 0, 0, drawW, drawH);
         return;
     }
+
+    // update() 会保留边界外一圈生命周期缓冲；这些对象无需进入 GDI 绘制路径。
+    constexpr float renderMargin = 36.0f;
+    if (x < LeftEdge - renderMargin || x > Right + renderMargin ||
+        y < TopEdge - renderMargin || y > Bottom + renderMargin) {
+        return;
+    }
+
     if (isRotated) {
         const int rw = cacheImg.getwidth();
         const int rh = cacheImg.getheight();

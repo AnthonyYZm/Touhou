@@ -2,6 +2,12 @@
 #pragma execution_character_set("utf-8")
 #include "Library.h"
 
+enum class EmitterAnchor {
+    ENEMY_CENTER,
+    ENEMY_OFFSET,
+    SCREEN_ABSOLUTE
+};
+
 // 弹幕任务结构体 
 struct BarrageTask {
     int type;            // 弹幕类型 
@@ -21,6 +27,13 @@ struct BarrageTask {
     DWORD lastBurstTime; // 上一发时间
     int style;           // 弹幕样式
     int startDelay;      // 阶段开始后的首次发射延迟，用于错开不同弹幕周期
+    unsigned int jitterState; // 风车错位用的任务私有伪随机状态，禁止不同任务共享
+    EmitterAnchor anchorMode; // 发射点锚定方式，默认随敌人中心移动
+    int offsetX;
+    int offsetY;
+    bool requireHolding;      // true 时仅在移动策略报告 HOLDING 后发射
+    int requiredMotionSegment; // -1 表示任意路点段
+    bool invertDirectionBySegment; // 奇数路点段反转旋转方向
 
     BarrageTask(int _type, int _interval, float _speed, float _omega, int _num, int _r = 0, 
         int _dir = 1, int _x = 0, int _y = 0, float _acc = 0.0f, 
@@ -42,6 +55,20 @@ struct BarrageTask {
 		currentAngle = 0.0f;
 		style = _style;
         startDelay = 0;
+        // 由任务配置生成稳定但彼此独立的种子；不使用函数 static 或全局 rand 状态。
+        jitterState = 2166136261u;
+        jitterState = (jitterState ^ (unsigned int)_type) * 16777619u;
+        jitterState = (jitterState ^ (unsigned int)_x) * 16777619u;
+        jitterState = (jitterState ^ (unsigned int)_y) * 16777619u;
+        jitterState = (jitterState ^ (unsigned int)(_dir + 3)) * 16777619u;
+        jitterState = (jitterState ^ (unsigned int)(static_cast<int>(_style) + 7)) * 16777619u;
+        if (jitterState == 0) jitterState = 1;
+        anchorMode = EmitterAnchor::ENEMY_CENTER;
+        offsetX = 0;
+        offsetY = 0;
+        requireHolding = false;
+        requiredMotionSegment = -1;
+        invertDirectionBySegment = false;
     }
 };
 
@@ -80,10 +107,6 @@ public:
 
 inline void putimagePNG(int x, int y, int srcW, int srcH, IMAGE* srcImg, int sx, int sy, int dstW, int dstH)
 {
-
-    HDC hDC = GetImageHDC(NULL);
-    HDC hSrc = GetImageHDC(srcImg);
-
     int clipLeft = LeftEdge;
     int clipTop = TopEdge;
     int clipRight = LeftEdge + WIDTH;
@@ -92,9 +115,9 @@ inline void putimagePNG(int x, int y, int srcW, int srcH, IMAGE* srcImg, int sx,
     if (x >= clipRight || y >= clipBottom || x + dstW <= clipLeft || y + dstH <= clipTop) {
         return;
     }
-    int savedDC = SaveDC(hDC);
 
-    IntersectClipRect(hDC, clipLeft, clipTop, clipRight, clipBottom);
+    HDC hDC = GetImageHDC(NULL);
+    HDC hSrc = GetImageHDC(srcImg);
 
     BLENDFUNCTION bf = { 0 };
     bf.BlendOp = AC_SRC_OVER;
@@ -102,6 +125,15 @@ inline void putimagePNG(int x, int y, int srcW, int srcH, IMAGE* srcImg, int sx,
     bf.SourceConstantAlpha = 255;
     bf.AlphaFormat = AC_SRC_ALPHA;
 
+    // 绝大多数弹幕完整位于游戏区：直接绘制，避免每颗都 SaveDC/裁剪/RestoreDC。
+    if (x >= clipLeft && y >= clipTop && x + dstW <= clipRight && y + dstH <= clipBottom) {
+        AlphaBlend(hDC, x, y, dstW, dstH, hSrc, sx, sy, srcW, srcH, bf);
+        return;
+    }
+
+    // 只有贴边对象才需要临时裁剪，保持不会画入右侧 UI 区域的原有效果。
+    int savedDC = SaveDC(hDC);
+    IntersectClipRect(hDC, clipLeft, clipTop, clipRight, clipBottom);
     AlphaBlend(
         hDC, x, y, dstW, dstH,
         hSrc, sx, sy, srcW, srcH,

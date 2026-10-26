@@ -41,6 +41,11 @@ void EnemyManager::updateSpawns() {
 		SpawnEvent& ev = eventQueue.front();
 		// 如果波次时间已经超过了该事件的 startTime，说明该开始生成这一组了
 		if (waveTime >= (DWORD)ev.startTime) {
+			if (ev.forceExitExisting) {
+				beginExitForExistingEnemies();
+				eventQueue.pop();
+				continue;
+			}
 			// 初始化运行时状态
 			ev.spawnedCount = 0;
 			ev.lastSpawnTime = 0; 
@@ -82,6 +87,25 @@ bool EnemyManager::checkEnemyClear() {
     }
 }
 
+void EnemyManager::beginExitForExistingEnemies() {
+	const DWORD now = GetTickCount();
+	for (Enemy* enemy : enemyList) {
+		if (enemy == nullptr || !enemy->isAlive() || enemy->type == eType::boss) continue;
+		const float startX = enemy->x;
+		const float startY = enemy->y;
+		const int exitStartMs = (int)(now - enemy->birthTime);
+		enemy->setStrategy([startX, startY, exitStartMs](Enemy* target, int elapsedMs) {
+			const int relativeMs = elapsedMs > exitStartMs ? elapsedMs - exitStartMs : 0;
+			const float elapsedSeconds = relativeMs * 0.001f;
+			target->x = startX;
+			target->y = startY - 360.0f * elapsedSeconds;
+			target->motionState = MotionState::EXITING;
+			target->motionSegment = 0;
+			target->fire = false;
+		});
+	}
+}
+
 void EnemyManager::createEnemy(const SpawnEvent& ev) {
 	// 特殊情况：如果是 Boss
 	if (ev.bossInstance != nullptr) {
@@ -102,7 +126,11 @@ void EnemyManager::createEnemy(const SpawnEvent& ev) {
 	// 注入移动策略
 	newEnemy->setStrategy(ev.moveLogic);
 	// 注入弹幕任务
-	for (const auto& task : ev.initTasks) {
+	for (auto task : ev.initTasks) {
+		// 普通敌人同样支持 startDelay，避免编队的首发在出生瞬间完全重叠。
+		task.lastTime = newEnemy->birthTime - task.interval + task.startDelay;
+		task.lastBurstTime = 0;
+		task.currentBurst = 0;
 		newEnemy->AddTask(task);
 	}
 	enemyList.push_back(newEnemy);
@@ -123,7 +151,9 @@ void EnemyManager::moveEnemy() {
 void EnemyManager::outBound() {
 	for (auto it = enemyList.begin(); it != enemyList.end(); ) {
 		Enemy* e = *it;
-		bool isOut = (e->y > HEIGHT + 100 || e->x < -150 || e->x > WIDTH + 150 || e->y < -300);
+		// 敌人的坐标使用游戏区域坐标，而不是窗口原点坐标。
+		bool isOut = (e->y > Bottom + 100 || e->x < LeftEdge - 150 ||
+			e->x > LeftEdge + WIDTH + 150 || e->y < TopEdge - 300);
 		if (e->type != eType::boss && isOut) {
 			delete e;
 			it = enemyList.erase(it);

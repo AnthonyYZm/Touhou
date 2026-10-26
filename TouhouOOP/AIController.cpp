@@ -188,10 +188,12 @@ void AIController::CalculateRepulsion(const Hero& hero, const std::vector<Barrag
 		// 计算自机到子弹的距离
 		float dx = hero.x - bullet->x;
 		float dy = hero.y - bullet->y;
-		float distance = std::sqrt(dx * dx + dy * dy);
+		const float distanceSq = dx * dx + dy * dy;
+		const float safeRadiusSq = safeRadius * safeRadius;
 
 		// 如果在危险半径内，产生斥力
-		if (distance < safeRadius && distance > 1.0f) {
+		if (distanceSq < safeRadiusSq && distanceSq > 1.0f) {
+			const float distance = std::sqrt(distanceSq);
 			// 归一化方向向量（从子弹指向自机）
 			float dirX = dx / distance;
 			float dirY = dy / distance;

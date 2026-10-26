@@ -14,12 +14,14 @@ struct SpawnEvent {
 	int count = 0;            // 生成数量
 	int interval = 0;         // 生成间隔
 	int hp = 0;               // 生命值
-	eType type;           // 敌人外观类型
+	eType type = eType::normal; // 敌人外观类型
 	float startX = 0, startY = 0; // 起始位置
 	MoveStrategy moveLogic; // 移动策略
 	std::vector<BarrageTask> initTasks; // 初始携带的弹幕任务
 
 	Boss* bossInstance = nullptr;
+	// 波次内的生命周期信号：让当前非 Boss 敌人自然离场，不生成实体。
+	bool forceExitExisting = false;
 	int spawnedCount = 0;
 	DWORD lastSpawnTime = 0;
 };
@@ -45,6 +47,7 @@ private:
 	int interval = 0;
 
 	DWORD t1, t2;
+	void beginExitForExistingEnemies();
 
 public:
 	EnemyManager();

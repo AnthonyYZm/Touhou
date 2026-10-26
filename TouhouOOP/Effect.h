@@ -39,6 +39,8 @@ private:
 	IMAGE imgBarrage;      // 弹幕生成特效
 	IMAGE imgRibbon;
 	bool loaded;
+	int activeCreateEffects;
+	int activeClearEffects;
 
 	void drawSpellRibbons(long elapsed);
 

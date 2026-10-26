@@ -11,6 +11,14 @@ enum class eType : int {
 	boss = 2
 };
 
+// 供移动策略与弹幕调度共享的通用运动状态。
+enum class MotionState {
+	ENTERING,
+	MOVING,
+	HOLDING,
+	EXITING
+};
+
 class Enemy;	
 
 // 定义移动策略函数签名：接收 自身指针 和 存活时间(ms)
@@ -51,6 +59,8 @@ public:
 	int texHeight;
 	int currentPhaseIdx;
 	int moveCount;
+	MotionState motionState;
+	int motionSegment;
 	Enemy(float _x = 0, float _y = 0, int _hp = 1);
 
 	int col, frame, row, sx, sy;

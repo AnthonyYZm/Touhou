@@ -56,6 +56,8 @@ Enemy::Enemy(float _x, float _y, int _hp) : Role(_x, _y, _hp) {
 	mover = nullptr;	
 	actionState = 0;
 	moveCount = 0;
+	motionState = MotionState::ENTERING;
+	motionSegment = 0;
 	spellAngle = 0.0f;
     if (imgSpellCircle.getwidth() == 0) {
         IMAGE tempImg;

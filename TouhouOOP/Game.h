@@ -91,6 +91,7 @@ class Game {
 	void AddSanaeAdvancedPhases(Boss& boss);
 	void AddSanaeBossWave(bool aiMode);
 	void ClearQueuedWaves();
+	void InitStageDemo();
 
 public:
 

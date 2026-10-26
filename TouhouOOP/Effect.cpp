@@ -1,7 +1,15 @@
 #pragma execution_character_set("utf-8")
 #include "Effect.h"
 
-EffectManager::EffectManager() { loaded = false; }
+namespace {
+	constexpr size_t kMaxTransientEffects = 160;
+	constexpr int kMaxCreateEffects = 48;
+	constexpr int kMaxClearEffects = 48;
+}
+
+EffectManager::EffectManager()
+	: loaded(false), activeCreateEffects(0), activeClearEffects(0) {
+}
 
 void EffectManager::init() {
 	if (loaded) return;
@@ -16,6 +24,13 @@ void EffectManager::init() {
 }
 
 void EffectManager::spawn(EffectType type, float x, float y, bool isPlayer) {
+	// 清弹和弹幕生成特效是高频对象；超出预算时直接抽样丢弃，不能拖慢主循环。
+	if ((type == EffectType::CREATE_BARRAGE && activeCreateEffects >= kMaxCreateEffects) ||
+		(type == EffectType::CLEAR_SMALL && activeClearEffects >= kMaxClearEffects) ||
+		((type == EffectType::CREATE_BARRAGE || type == EffectType::CLEAR_SMALL) && effects.size() >= kMaxTransientEffects)) {
+		return;
+	}
+
 	EffectInstance eff;
 	eff.type = type;
 	eff.x = x; eff.y = y;
@@ -71,12 +86,16 @@ void EffectManager::spawn(EffectType type, float x, float y, bool isPlayer) {
 		break;
 	}
 	effects.push_back(eff);
+	if (type == EffectType::CREATE_BARRAGE) ++activeCreateEffects;
+	if (type == EffectType::CLEAR_SMALL) ++activeClearEffects;
 }
 
 void EffectManager::update() {
 	DWORD now = GetTickCount();
 	for (auto it = effects.begin(); it != effects.end(); ) {
 		if (!it->active) {
+			if (it->type == EffectType::CREATE_BARRAGE) --activeCreateEffects;
+			if (it->type == EffectType::CLEAR_SMALL) --activeClearEffects;
 			it = effects.erase(it); continue;
 		}
 
@@ -106,9 +125,10 @@ void EffectManager::update() {
 			float t = (float)elapsed / 1500.0f; 
 
 			if (t < 0.2f) {
-				// 0~0.2s: 快速进场 
+				// 0~0.2s: 快速进场
 				float subT = t / 0.2f; 
-				it->x = startX + (centerX - startX) * (1 - pow(1 - subT, 3));
+				float inverseT = 1.0f - subT;
+				it->x = startX + (centerX - startX) * (1.0f - inverseT * inverseT * inverseT);
 			}
 			else if (t < 0.8f) {
 				// 0.2~0.8s: 缓慢移动 
