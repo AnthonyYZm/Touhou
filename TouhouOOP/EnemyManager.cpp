@@ -1,12 +1,9 @@
 #pragma execution_character_set("utf-8")
 #include "EnemyManager.h"
-#include <unordered_set>
+#include <utility>
 
 EnemyManager::EnemyManager() {
-	aliveEnemy = 0; 
-	enemyIdx = 0;
-	clear = true;
-	t1 = 0; t2 = 0;
+	aliveEnemy = 0;
 }
 
 EnemyManager::~EnemyManager() {
@@ -15,88 +12,65 @@ EnemyManager::~EnemyManager() {
 }
 
 
-void EnemyManager::setWave(const std::vector<SpawnEvent>& event) {
-	std::queue<SpawnEvent> empty;
-	std::swap(eventQueue, empty);
-	activeEvents.clear();
+void EnemyManager::scheduleSpawnGroup(
+	const SpawnGroupDef& group,
+	std::uint64_t worldFrame) {
+	if (group.count <= 0) return; // 数量无效时不排入生成计划
 
-	for (const auto& ev : event) {
-		eventQueue.push(ev);
-	}
+	PendingSpawnGroup pending;
+	pending.definition = group;        // 保存这组敌人的静态参数
+	pending.nextSpawnFrame = worldFrame; // 第一只在当前世界帧生成
 
-	waveStartTime = GetTickCount();
-	clear = false;
+	// 把毫秒间隔转成逻辑帧。
+	// 间隔为 0 时仍至少隔 1 帧生成下一只。
+	pending.intervalFrames = group.intervalMs <= 0
+		? 1
+		: GameFramesFromMilliseconds(
+			static_cast<std::uint64_t>(group.intervalMs));
+
+	pendingSpawnGroups.push_back(std::move(pending));
 }
 
-void EnemyManager::updateSpawns() {
-	// 如果全都空了，就没必要跑逻辑了
-	if (clear && eventQueue.empty() && activeEvents.empty() && enemyList.empty()) return;
+void EnemyManager::updateSpawns(std::uint64_t worldFrame) {
+	for (auto it = pendingSpawnGroups.begin();
+		it != pendingSpawnGroups.end();) {
+		if (worldFrame < it->nextSpawnFrame) {
+			++it; // 这组还没到下一只敌人的生成时间
+			continue;
+		}
 
-	DWORD now = GetTickCount();
-	DWORD waveTime = now - waveStartTime;
+		createEnemy(it->definition); // 生成一只
+		++it->spawnedCount;
 
-	// 将所有时间到了的事件从队列移动到活跃列表
-	while (!eventQueue.empty()) {
-		// 获取队头事件
-		SpawnEvent& ev = eventQueue.front();
-		// 如果波次时间已经超过了该事件的 startTime，说明该开始生成这一组了
-		if (waveTime >= (DWORD)ev.startTime) {
-			if (ev.forceExitExisting) {
-				beginExitForExistingEnemies();
-				eventQueue.pop();
-				continue;
-			}
-			// 初始化运行时状态
-			ev.spawnedCount = 0;
-			ev.lastSpawnTime = 0; 
-			// 移动到活跃列表
-			activeEvents.push_back(ev);
-			eventQueue.pop();
+		if (it->spawnedCount >= it->definition.count) {
+			// 整组生成完毕，移除运行时计划。
+			it = pendingSpawnGroups.erase(it);
 		}
 		else {
-			break;
+			// 计算这组下一只敌人的目标生成帧。
+			it->nextSpawnFrame += it->intervalFrames;
+			++it;
 		}
-	}
-
-	// 遍历活跃列表，执行生成逻辑
-	for (auto it = activeEvents.begin(); it != activeEvents.end(); ) {
-		SpawnEvent& ev = *it; 
-		if (ev.lastSpawnTime == 0 || (now - ev.lastSpawnTime >= (DWORD)ev.interval)) {
-
-			createEnemy(ev); 
-
-			ev.lastSpawnTime = now;
-			ev.spawnedCount++;
-
-			if (ev.spawnedCount >= ev.count) {
-				// 生成完了，从活跃列表中移除
-				it = activeEvents.erase(it);
-				continue; 
-			}
-		}
-		++it; 
 	}
 }
 
+
+// 清场判定同时检查已生成敌人和仍在生成中的组。
+// 否则可能在一组尚未刷完时错误地认为场上已经清空。
 bool EnemyManager::checkEnemyClear() {
-	if (enemyList.empty() && eventQueue.empty() && activeEvents.empty()) {
-        return true;
-    }
-    else {
-        return false;
-    }
+	return enemyList.empty() && pendingSpawnGroups.empty();
 }
 
-void EnemyManager::beginExitForExistingEnemies() {
-	const DWORD now = GetTickCount();
+void EnemyManager::retreatNonBossEnemies() {
+	const DWORD now = GetTickCount(); // 当前系统毫秒时钟，用于对齐敌人出生计时
 	for (Enemy* enemy : enemyList) {
 		if (enemy == nullptr || !enemy->isAlive() || enemy->type == eType::boss) continue;
-		const float startX = enemy->x;
-		const float startY = enemy->y;
-		const int exitStartMs = (int)(now - enemy->birthTime);
+		const float startX = enemy->x; // 退场开始时固定的水平位置
+		const float startY = enemy->y; // 退场开始时的位置
+		const int exitStartMs = (int)(now - enemy->birthTime); // 退场开始时的敌人年龄
 		enemy->setStrategy([startX, startY, exitStartMs](Enemy* target, int elapsedMs) {
-			const int relativeMs = elapsedMs > exitStartMs ? elapsedMs - exitStartMs : 0;
-			const float elapsedSeconds = relativeMs * 0.001f;
+			const int relativeMs = elapsedMs > exitStartMs ? elapsedMs - exitStartMs : 0; // 进入退场后的时间
+			const float elapsedSeconds = relativeMs * 0.001f; // 转为秒以计算离场距离
 			target->x = startX;
 			target->y = startY - 360.0f * elapsedSeconds;
 			target->motionState = MotionState::EXITING;
@@ -106,27 +80,19 @@ void EnemyManager::beginExitForExistingEnemies() {
 	}
 }
 
-void EnemyManager::createEnemy(const SpawnEvent& ev) {
-	// 特殊情况：如果是 Boss
-	if (ev.bossInstance != nullptr) {
-		ev.bossInstance->alive = true;
-		enemyList.push_back(ev.bossInstance);
-		aliveEnemy++;
-		return;
-	}
-	// 普通敌人生成
-	Enemy* newEnemy = new Enemy(ev.startX, ev.startY, ev.hp); 
-	newEnemy->type = ev.type;
+void EnemyManager::createEnemy(const SpawnGroupDef& group) {
+	Enemy* newEnemy = new Enemy(group.startX, group.startY, group.hp);
+	newEnemy->type = group.type;
 	newEnemy->alive = true;
 	if (newEnemy->type == eType::boss) {
-		newEnemy->maxHp = (ev.hp > 0) ? ev.hp : 2000; // 默认2000血
+		newEnemy->maxHp = (group.hp > 0) ? group.hp : 2000; // 默认2000血
 		newEnemy->hp = newEnemy->maxHp;
 		newEnemy->phase = 1; 
 	}
 	// 注入移动策略
-	newEnemy->setStrategy(ev.moveLogic);
+	newEnemy->setStrategy(group.moveLogic);
 	// 注入弹幕任务
-	for (auto task : ev.initTasks) {
+	for (auto task : group.initTasks) {
 		// 普通敌人同样支持 startDelay，避免编队的首发在出生瞬间完全重叠。
 		task.lastTime = newEnemy->birthTime - task.interval + task.startDelay;
 		task.lastBurstTime = 0;
@@ -137,8 +103,8 @@ void EnemyManager::createEnemy(const SpawnEvent& ev) {
 	aliveEnemy++;
 }
 
-void EnemyManager::moveEnemy() {
-	updateSpawns(); // 先看看有没有新怪要刷
+void EnemyManager::moveEnemy(std::uint64_t worldFrame) {
+	updateSpawns(worldFrame);
 	for (auto it = enemyList.begin(); it != enemyList.end(); ++it) {
 		Enemy* e = *it;
 		if (e == nullptr) continue;
@@ -190,37 +156,14 @@ void EnemyManager::drawAll() {
 }
 
 void EnemyManager::clearEnemy() {
-	// 统一回收当前场景中的敌人，避免遗留悬空指针。
-	std::unordered_set<Enemy*> released;
 	for (auto* e : enemyList) {
-		if (e != nullptr && released.insert(e).second) {
-			delete e;
-		}
+		delete e;
 	}
 	enemyList.clear();
-
-	// 回收尚未刷出的 Boss 实例（挂在事件中）。
-	auto releaseSpawnBoss = [&](SpawnEvent& ev) {
-		if (ev.bossInstance != nullptr && released.insert(ev.bossInstance).second) {
-			delete ev.bossInstance;
-		}
-		ev.bossInstance = nullptr;
-	};
-
-	while (!eventQueue.empty()) {
-		SpawnEvent ev = eventQueue.front();
-		eventQueue.pop();
-		releaseSpawnBoss(ev);
-	}
-	for (auto& ev : activeEvents) {
-		releaseSpawnBoss(ev);
-	}
-	activeEvents.clear();
+	pendingSpawnGroups.clear();
 }
 
 void EnemyManager::InitRound() {
-	enemyIdx = 0;
 	aliveEnemy = 0;
-	clear = true;
 	clearEnemy();
 }

@@ -9,6 +9,7 @@
 #include "Enemy.h"
 #include "Barrage.h"
 #include "EnemyManager.h"
+#include "StageTimeline.h"
 #include "Boss.h"
 #include "Item.h"
 #include "Audio.h"
@@ -42,24 +43,21 @@ struct bTypeHash {
 
 class Game {
 
-	static int bulletLevel;
-	bool enemyFire;
-	bool wait;
-	EnemyManager E;
+	static int bulletLevel; // 自机火力等级，供静态弹幕逻辑共用
+	bool enemyFire; // 当前关卡的敌机射击开关
+	EnemyManager E; // 敌人实体与待生成组的所有者
+	StageTimeline stageTimeline; // 当前模式的关卡事件脚本
+	std::uint64_t worldFrame = 0; // 游戏世界帧；清场门暂停脚本时仍继续推进
 	Hero Hero;
 	Barrage Barr;
 	Bullet B;
 
-	std::queue<waveData> waveQueue;
-	std::vector<SpawnEvent> currentWave;
-	waveData nextWave;
-	std::vector<Item*> items;
-	std::vector<Barrage*> spellBarrages;
-	bool isSpellActive;
-	float spellRadius;
-	float spellAngle;
+	std::vector<Item*> items; // 场上掉落道具
+	std::vector<Barrage*> spellBarrages; // 符卡阶段独立弹幕对象
+	bool isSpellActive; // 自机符卡是否正在运行
+	float spellRadius; // 自机符卡当前扩张半径
+	float spellAngle; // 自机符卡当前旋转角度
 
-	DWORD waitStart;
 	bool isFullScreen = false;
 	std::wstring currentBGM;
 
@@ -89,9 +87,8 @@ class Game {
 	Boss* CreateSanaeBoss(bool aiMode);
 	void AddSanaeBasePhases(Boss& boss);
 	void AddSanaeAdvancedPhases(Boss& boss);
-	void AddSanaeBossWave(bool aiMode);
-	void ClearQueuedWaves();
-	void InitStageDemo();
+	void AddSanaeBossEvent(std::vector<StageEvent>& events, bool aiMode, std::uint64_t frame);
+	void InitStageDemo(std::vector<StageEvent>& events);
 
 public:
 
@@ -113,7 +110,7 @@ public:
 	void CheckCollision();
 	void Barrages();
 	void InitBarrageHandlers(); // 初始化弹幕分发表
-	void Enemies();
+	void Enemies(std::uint64_t frame);
 	void CastSpellCard();
 	void UpdateSpellCard();
 	void ClearSpellBarrages();

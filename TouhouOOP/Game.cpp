@@ -16,10 +16,7 @@ Game::Game() {
 	SetConsoleOutputCP(CP_UTF8);
 
 	enemyFire = false;
-	wait = false;
 	bulletLevel = 1;
-	InitNormalLevels();    
-	InitAILevel();
 	isSpellActive = false;
 	spellAngle = 0.0f;
 	spellRadius = 10.0f;
@@ -39,7 +36,6 @@ Game::Game() {
 
 Game::~Game() {
 	ClearSpellBarrages();
-	ClearQueuedWaves();
 
 	// 清理 AI 控制器
 	if (aiController) {
@@ -140,32 +136,44 @@ void Game::Touhou() {
 }
 
 void Game::HandleRound() {
-	DWORD now = GetTickCount();
+	// 先处理当前时间点到期的关卡事件。
+	stageTimeline.Tick(
+		[this]() {
+			return E.checkEnemyClear(); // WaitForEnemiesClear 使用的条件
+		},
+		[this](const StageEvent& event) {
+			switch (event.type) {
+			case StageEventType::SpawnGroup:
+				// 把静态生成配置交给 EnemyManager。
+				E.scheduleSpawnGroup(event.spawnGroup, worldFrame);
+				break;
 
-	if (E.checkEnemyClear() && !wait) {
-		if (waveQueue.empty()) { 
-			return;
-		}
-		nextWave = waveQueue.front();
-		wait = true;
-		waitStart = now;
-	}
-	
-	if (wait) {
-		if (now - waitStart >= (DWORD)nextWave.waveDelay) {
-			wait = false;
-			waveQueue.pop();
-			E.InitRound();
-			E.setWave(nextWave.events);
-		}
-	}
-	Barrages(); 
-	Enemies();  
-	UpdateItems(); 
+			case StageEventType::RetreatNonBossEnemies:
+				// 让现存非 Boss 敌人停止攻击并进入离场移动。
+				E.retreatNonBossEnemies();
+				break;
+
+			case StageEventType::Callback:
+				// 执行该事件配置的回调，例如创建 Boss。
+				if (event.callback) event.callback();
+				break;
+
+			case StageEventType::WaitForEnemiesClear:
+				// 这个事件由 StageTimeline 自己检查并阻塞脚本。
+				break;
+			}
+		});
+
+	// 每个游戏世界帧仍持续更新战斗对象。
+	Barrages();
+	Enemies(worldFrame);
+	UpdateItems();
 	UpdateSpellCard();
 	CheckCollision();
 	updateBoss();
 	handleBGM();
+
+	++worldFrame; // 推进世界逻辑时间
 }
 
 void Game::handleBGM() {
@@ -187,188 +195,211 @@ void Game::handleBGM() {
 }
 
 namespace {
-    SpawnEvent MakeStageSpawn(int startTime, int count, int interval, eType type, int hp,
-        float startX, float startY, const MoveStrategy& movement,
-        const std::vector<BarrageTask>& tasks = std::vector<BarrageTask>()) {
-        SpawnEvent event;
-        event.startTime = startTime;
-        event.count = count;
-        event.interval = interval;
-        event.type = type;
-        event.hp = hp;
-        event.startX = startX;
-        event.startY = startY;
-        event.moveLogic = movement;
-        event.initTasks = tasks;
+    constexpr int StageOpeningDelayMs = 1000; // 普通关开场等待 1 秒
+
+	// factory function
+    StageEvent MakeStageSpawn(
+        int startTime,       // 关卡表中的时间，毫秒
+        int count,           // 敌人数
+        int interval,        // 每只之间的生成间隔，毫秒
+        eType type,          // normal 或 elf
+        int hp,              // 每只敌人的生命值
+        float startX,        // 出生 X 坐标
+        float startY,        // 出生 Y 坐标
+        const MoveStrategy& movement, // 出生后的移动轨迹
+        const std::vector<BarrageTask>& tasks = {}) { // 初始弹幕任务，可省略
+
+        StageEvent event;
+
+        // 普通关所有出场时间自动加 1 秒开场等待。
+        event.frame = GameFramesFromMilliseconds(
+            static_cast<std::uint64_t>(
+                startTime + StageOpeningDelayMs));
+
+        event.type = StageEventType::SpawnGroup;
+
+        // 将参数存入敌人组配置。
+        event.spawnGroup.count = count;
+        event.spawnGroup.intervalMs = interval;
+        event.spawnGroup.type = type;
+        event.spawnGroup.hp = hp;
+        event.spawnGroup.startX = startX;
+        event.spawnGroup.startY = startY;
+        event.spawnGroup.moveLogic = movement;
+        event.spawnGroup.initTasks = tasks;
+
         return event;
     }
 
-    BarrageTask MakeHoldingTask(int type, int interval, float speed, float omega, int num,
-        int r, int dir, float acc, int style, int startDelay = 0) {
-        BarrageTask task(type, interval, speed, omega, num, r, dir, 0, 0, acc, 1, 0, style);
-        task.requireHolding = true;
+    // 创建需要在敌人停留阶段发射的弹幕任务。
+    BarrageTask MakeHoldingTask(
+        int type,        // bType 弹幕类型
+        int interval,    // 发射间隔，毫秒
+        float speed,     // 子弹速度
+        float omega,     // 子弹旋转/角速度参数
+        int num,         // 每次发射的子弹数
+        int r,            // 弹幕半径或该弹幕类型对应的距离参数
+        int dir,          // 旋转/发射方向
+        float acc,        // 子弹加速度参数
+        int style,        // BulletStyle 子弹样式
+        int startDelay = 0) { // 敌人出生后首次发射的额外延迟，毫秒
+        BarrageTask task(type, interval, speed, omega, num,
+            r, dir, 0, 0, acc, 1, 0, style);
+        task.requireHolding = true; // 敌人进入停留状态后才允许发射
         task.startDelay = startDelay;
         return task;
     }
 }
 
-void Game::InitStageDemo() {
-    waveData stage;
-    stage.waveDelay = 1000;
-    const float left = (float)LeftEdge;
-    const float right = (float)Right;
-    const float top = (float)TopEdge;
-    const float centreX = LeftEdge + WIDTH * 0.5f;
+void Game::InitStageDemo(std::vector<StageEvent>& events) {
+    const float left = (float)LeftEdge; // 游戏区域左边界
+    const float right = (float)Right; // 游戏区域右边界
+    const float top = (float)TopEdge; // 游戏区域上边界
+    const float centreX = LeftEdge + WIDTH * 0.5f; // 游戏区域水平中心
 
     // 0-12s：双列开场，低速直线弹仅用于教学。
-    const std::vector<BarrageTask> openingTasks = {
+    const std::vector<BarrageTask> openingTasks = { // 开场普通敌人携带的低频直线弹
         BarrageTask((int)bType::down_st, 1650, 2.0f, 0.0f, 1, 0, 1, 0, 0, 0.0f, 1, 0, (int)BulletStyle::GREEN_)
     };
-    stage.events.push_back(MakeStageSpawn(0, 8, 450, eType::normal, 1, left - 40.0f, top + 80.0f,
+    events.push_back(MakeStageSpawn(0, 8, 450, eType::normal, 1, left - 40.0f, top + 80.0f,
         Moves::BezierPass({ left - 40.0f, top + 80.0f }, { left + 80.0f, top + 110.0f },
             { centreX - 180.0f, top + 260.0f }, { left + WIDTH * 0.42f, Bottom + 80.0f }, 5200, true, 0.30f, 0.62f), openingTasks));
-    stage.events.push_back(MakeStageSpawn(0, 8, 450, eType::normal, 1, right + 40.0f, top + 80.0f,
+    events.push_back(MakeStageSpawn(0, 8, 450, eType::normal, 1, right + 40.0f, top + 80.0f,
         Moves::BezierPass({ right + 40.0f, top + 80.0f }, { right - 80.0f, top + 110.0f },
             { centreX + 180.0f, top + 260.0f }, { left + WIDTH * 0.58f, Bottom + 80.0f }, 5200, true, 0.30f, 0.62f), openingTasks));
 
     // 12-27s：燕返交叉，仅在贝塞尔中段发射少量放射弹。
-    const std::vector<BarrageTask> swallowTasks = {
+    const std::vector<BarrageTask> swallowTasks = { // 燕返编队携带的少量放射弹
         BarrageTask((int)bType::firework, 2500, 2.15f, 0.0f, 6, 0, 1, 0, 0, 0.0f, 1, 0, (int)BulletStyle::BLUE_)
     };
-    stage.events.push_back(MakeStageSpawn(12000, 10, 500, eType::normal, 1, left - 45.0f, top + 150.0f,
+    events.push_back(MakeStageSpawn(12000, 10, 500, eType::normal, 1, left - 45.0f, top + 150.0f,
         Moves::BezierPass({ left - 45.0f, top + 150.0f }, { left + 190.0f, top + 40.0f },
             { right - 190.0f, top + 340.0f }, { right + 70.0f, top + 220.0f }, 6200, true, 0.35f, 0.65f), swallowTasks));
-    stage.events.push_back(MakeStageSpawn(12000, 10, 500, eType::normal, 1, right + 45.0f, top + 150.0f,
+    events.push_back(MakeStageSpawn(12000, 10, 500, eType::normal, 1, right + 45.0f, top + 150.0f,
         Moves::BezierPass({ right + 45.0f, top + 150.0f }, { right - 190.0f, top + 40.0f },
             { left + 190.0f, top + 340.0f }, { left - 70.0f, top + 220.0f }, 6200, true, 0.35f, 0.65f), swallowTasks));
 
     // 27-42s：三点花阵，精英仅在停稳后发射，首发依次错开 0/300/600ms。
-    BarrageTask flowerLeft = MakeHoldingTask((int)bType::firework, 1500, 2.25f, 0.0f, 8, 0, 1, 0.0f, (int)BulletStyle::BLUE_, 0);
-    BarrageTask flowerCenterBlue = MakeHoldingTask((int)bType::firework, 1700, 2.1f, 0.0f, 7, 0, 1, 0.0f, (int)BulletStyle::BLUE_, 300);
-    BarrageTask flowerCenterRed = MakeHoldingTask((int)bType::firework, 1700, 2.1f, 0.0f, 7, 0, 1, 0.0f, (int)BulletStyle::RED_, 600);
-    BarrageTask flowerRight = MakeHoldingTask((int)bType::firework, 1500, 2.25f, 0.0f, 8, 0, 1, 0.0f, (int)BulletStyle::RED_, 300);
-    stage.events.push_back(MakeStageSpawn(27000, 1, 0, eType::elf, 20, left + 90.0f, top - 50.0f,
+    BarrageTask flowerLeft = MakeHoldingTask((int)bType::firework, 1500, 2.25f, 0.0f, 8, 0, 1, 0.0f, (int)BulletStyle::BLUE_, 0); // 左侧停留精英的蓝色花弹
+    BarrageTask flowerCenterBlue = MakeHoldingTask((int)bType::firework, 1700, 2.1f, 0.0f, 7, 0, 1, 0.0f, (int)BulletStyle::BLUE_, 300); // 中央精英第一组花弹
+    BarrageTask flowerCenterRed = MakeHoldingTask((int)bType::firework, 1700, 2.1f, 0.0f, 7, 0, 1, 0.0f, (int)BulletStyle::RED_, 600); // 中央精英错开发射的红色花弹
+    BarrageTask flowerRight = MakeHoldingTask((int)bType::firework, 1500, 2.25f, 0.0f, 8, 0, 1, 0.0f, (int)BulletStyle::RED_, 300); // 右侧停留精英的红色花弹
+    events.push_back(MakeStageSpawn(27000, 1, 0, eType::elf, 20, left + 90.0f, top - 50.0f,
         Moves::EnterHoldExit({ left + 90.0f, top - 50.0f }, { left + 160.0f, top + 175.0f }, 1800, 8500, 180.0f), { flowerLeft }));
-    stage.events.push_back(MakeStageSpawn(27300, 1, 0, eType::elf, 20, centreX, top - 60.0f,
+    events.push_back(MakeStageSpawn(27300, 1, 0, eType::elf, 20, centreX, top - 60.0f,
         Moves::EnterHoldExit({ centreX, top - 60.0f }, { centreX, top + 125.0f }, 1800, 8800, 190.0f), { flowerCenterBlue, flowerCenterRed }));
-    stage.events.push_back(MakeStageSpawn(27600, 1, 0, eType::elf, 20, right - 90.0f, top - 50.0f,
+    events.push_back(MakeStageSpawn(27600, 1, 0, eType::elf, 20, right - 90.0f, top - 50.0f,
         Moves::EnterHoldExit({ right - 90.0f, top - 50.0f }, { right - 160.0f, top + 175.0f }, 1800, 8500, 180.0f), { flowerRight }));
 
     // 42-57s：中央风廊。两列反相折返，中心始终没有生成源。
-    const std::vector<BarrageTask> windLeftTasks = {
+    const std::vector<BarrageTask> windLeftTasks = { // 左侧风廊敌人发射蓝色直线弹
         BarrageTask((int)bType::down_st, 1350, 2.35f, 0.0f, 1, 0, 1, 0, 0, 0.0f, 1, 0, (int)BulletStyle::BLUE_)
     };
-    const std::vector<BarrageTask> windRightTasks = {
+    const std::vector<BarrageTask> windRightTasks = { // 右侧风廊敌人发射红色直线弹
         BarrageTask((int)bType::down_st, 1350, 2.35f, 0.0f, 1, 0, 1, 0, 0, 0.0f, 1, 0, (int)BulletStyle::RED_)
     };
-    stage.events.push_back(MakeStageSpawn(42000, 11, 520, eType::normal, 1, left + 150.0f, top - 35.0f,
+    events.push_back(MakeStageSpawn(42000, 11, 520, eType::normal, 1, left + 150.0f, top - 35.0f,
         Moves::ZigzagDive(left + 165.0f, top - 35.0f, 72.0f, 1700, 205.0f, 0.0f), windLeftTasks));
-    stage.events.push_back(MakeStageSpawn(42000, 11, 520, eType::normal, 1, right - 150.0f, top - 35.0f,
+    events.push_back(MakeStageSpawn(42000, 11, 520, eType::normal, 1, right - 150.0f, top - 35.0f,
         Moves::ZigzagDive(right - 165.0f, top - 35.0f, 72.0f, 1700, 205.0f, PI), windRightTasks));
-    BarrageTask sideAim = MakeHoldingTask((int)bType::pincer_aim, 2600, 3.3f, 0.0f, 1, 34, 1, 0.0f, (int)BulletStyle::GREEN_, 500);
-    stage.events.push_back(MakeStageSpawn(44700, 1, 0, eType::elf, 28, left - 40.0f, top + 190.0f,
+    BarrageTask sideAim = MakeHoldingTask((int)bType::pincer_aim, 2600, 3.3f, 0.0f, 1, 34, 1, 0.0f, (int)BulletStyle::GREEN_, 500); // 两侧停留精英的延迟自机狙
+    events.push_back(MakeStageSpawn(44700, 1, 0, eType::elf, 28, left - 40.0f, top + 190.0f,
         Moves::EnterHoldExit({ left - 40.0f, top + 190.0f }, { left + 78.0f, top + 205.0f }, 1400, 7200, 190.0f), { sideAim }));
-    stage.events.push_back(MakeStageSpawn(45100, 1, 0, eType::elf, 28, right + 40.0f, top + 190.0f,
+    events.push_back(MakeStageSpawn(45100, 1, 0, eType::elf, 28, right + 40.0f, top + 190.0f,
         Moves::EnterHoldExit({ right + 40.0f, top + 190.0f }, { right - 78.0f, top + 205.0f }, 1400, 7200, 190.0f), { sideAim }));
 
     // 57-72s：环祭编队，八个护卫只移动，中央精英停稳后低密度发射。
-    BarrageTask ritualRing = MakeHoldingTask((int)bType::circle_mill, 3000, 2.1f, 0.0f, 12, 72, 1, 0.0f, (int)BulletStyle::GREEN_, 300);
-    BarrageTask ritualAim = MakeHoldingTask((int)bType::pincer_aim, 3600, 3.1f, 0.0f, 1, 46, 1, 0.0f, (int)BulletStyle::RED_, 1000);
-    stage.events.push_back(MakeStageSpawn(57000, 1, 0, eType::elf, 30, centreX, top - 60.0f,
+    BarrageTask ritualRing = MakeHoldingTask((int)bType::circle_mill, 3000, 2.1f, 0.0f, 12, 72, 1, 0.0f, (int)BulletStyle::GREEN_, 300); // 中央精英的环形弹
+    BarrageTask ritualAim = MakeHoldingTask((int)bType::pincer_aim, 3600, 3.1f, 0.0f, 1, 46, 1, 0.0f, (int)BulletStyle::RED_, 1000); // 中央精英的延迟瞄准弹
+    events.push_back(MakeStageSpawn(57000, 1, 0, eType::elf, 30, centreX, top - 60.0f,
         Moves::EnterHoldExit({ centreX, top - 60.0f }, { centreX, top + 145.0f }, 1700, 9000, 180.0f), { ritualRing, ritualAim }));
     for (int i = 0; i < 8; ++i) {
-        const float angle = i * (2.0f * PI / 8.0f);
-        stage.events.push_back(MakeStageSpawn(57400, 1, 0, eType::normal, 7,
+        const float angle = i * (2.0f * PI / 8.0f); // 第 i 个护卫在环形编队中的角度
+        events.push_back(MakeStageSpawn(57400, 1, 0, eType::normal, 7,
             centreX + 150.0f * cos(angle), top + 150.0f + 70.0f * sin(angle),
             Moves::OrbitThenExit({ centreX, top + 155.0f }, 150.0f, 70.0f, 7000, angle, (i % 2) == 0)));
     }
 
     // 72-87s：蛇行突击，左右入口交替，每只仅有一到两次自机狙机会。
-    const std::vector<BarrageTask> snakeAim = {
+    const std::vector<BarrageTask> snakeAim = { // 蛇行普通敌人携带的低频瞄准弹
         BarrageTask((int)bType::pincer_aim, 2500, 3.4f, 0.0f, 1, 0, 1, 0, 0, 0.0f, 1, 0, (int)BulletStyle::GREEN_)
     };
-    stage.events.push_back(MakeStageSpawn(72000, 15, 1000, eType::normal, 1, left + 105.0f, top - 40.0f,
+    events.push_back(MakeStageSpawn(72000, 15, 1000, eType::normal, 1, left + 105.0f, top - 40.0f,
         Moves::ZigzagDive(left + 125.0f, top - 40.0f, 95.0f, 1500, 235.0f, 0.0f), snakeAim));
-    stage.events.push_back(MakeStageSpawn(72500, 15, 1000, eType::normal, 1, right - 105.0f, top - 40.0f,
+    events.push_back(MakeStageSpawn(72500, 15, 1000, eType::normal, 1, right - 105.0f, top - 40.0f,
         Moves::ZigzagDive(right - 125.0f, top - 40.0f, 95.0f, 1500, 235.0f, PI), snakeAim));
 
     // 87-103s：镜门夹击，四只精英分两批镜像停稳后发射低密度曲线弹。
-    BarrageTask blueGate = MakeHoldingTask((int)bType::curved_petal, 2800, 2.0f, 9.0f, 6, 720, 1, 0.007f, (int)BulletStyle::BLUE_, 0);
-    BarrageTask redGate = MakeHoldingTask((int)bType::curved_petal, 2800, 2.0f, 9.0f, 6, 720, -1, 0.007f, (int)BulletStyle::RED_, 300);
-    stage.events.push_back(MakeStageSpawn(87000, 1, 0, eType::elf, 35, left - 50.0f, top + 140.0f,
+    BarrageTask blueGate = MakeHoldingTask((int)bType::curved_petal, 2800, 2.0f, 9.0f, 6, 720, 1, 0.007f, (int)BulletStyle::BLUE_, 0); // 镜门左侧精英发射的蓝色曲线弹
+    BarrageTask redGate = MakeHoldingTask((int)bType::curved_petal, 2800, 2.0f, 9.0f, 6, 720, -1, 0.007f, (int)BulletStyle::RED_, 300); // 镜门右侧精英反向发射红色曲线弹
+    events.push_back(MakeStageSpawn(87000, 1, 0, eType::elf, 35, left - 50.0f, top + 140.0f,
         Moves::EnterHoldExit({ left - 50.0f, top + 140.0f }, { left + 125.0f, top + 155.0f }, 1500, 7600, 185.0f), { blueGate }));
-    stage.events.push_back(MakeStageSpawn(87000, 1, 0, eType::elf, 35, right + 50.0f, top + 140.0f,
+    events.push_back(MakeStageSpawn(87000, 1, 0, eType::elf, 35, right + 50.0f, top + 140.0f,
         Moves::EnterHoldExit({ right + 50.0f, top + 140.0f }, { right - 125.0f, top + 155.0f }, 1500, 7600, 185.0f), { redGate }));
-    stage.events.push_back(MakeStageSpawn(87700, 1, 0, eType::elf, 35, left - 50.0f, top + 215.0f,
+    events.push_back(MakeStageSpawn(87700, 1, 0, eType::elf, 35, left - 50.0f, top + 215.0f,
         Moves::EnterHoldExit({ left - 50.0f, top + 215.0f }, { left + 190.0f, top + 215.0f }, 1500, 7200, 190.0f), { blueGate }));
-    stage.events.push_back(MakeStageSpawn(87700, 1, 0, eType::elf, 35, right + 50.0f, top + 215.0f,
+    events.push_back(MakeStageSpawn(87700, 1, 0, eType::elf, 35, right + 50.0f, top + 215.0f,
         Moves::EnterHoldExit({ right + 50.0f, top + 215.0f }, { right - 190.0f, top + 215.0f }, 1500, 7200, 190.0f), { redGate }));
 
     // 103-116s：万华终幕。FigureEight 每 3 秒切换 segment，二者交换曲线/环绕弹。
-    BarrageTask figurePetal = MakeHoldingTask((int)bType::curved_petal, 2500, 2.05f, 10.0f, 7, 760, 1, 0.008f, (int)BulletStyle::BLUE_, 0);
+    BarrageTask figurePetal = MakeHoldingTask((int)bType::curved_petal, 2500, 2.05f, 10.0f, 7, 760, 1, 0.008f, (int)BulletStyle::BLUE_, 0); // 八字轨迹一侧使用的曲线弹
     figurePetal.requireHolding = false;
     figurePetal.requiredMotionSegment = 0;
-    BarrageTask figureOrbit = MakeHoldingTask((int)bType::orbit_release, 3200, 2.55f, 0.042f, 12, 760, -1, 0.16f, (int)BulletStyle::RED_, 0);
+    BarrageTask figureOrbit = MakeHoldingTask((int)bType::orbit_release, 3200, 2.55f, 0.042f, 12, 760, -1, 0.16f, (int)BulletStyle::RED_, 0); // 八字轨迹另一阶段使用的环绕弹
     figureOrbit.requireHolding = false;
     figureOrbit.requiredMotionSegment = 1;
-    stage.events.push_back(MakeStageSpawn(103000, 1, 0, eType::elf, 30, centreX - 125.0f, top + 160.0f,
+    events.push_back(MakeStageSpawn(103000, 1, 0, eType::elf, 30, centreX - 125.0f, top + 160.0f,
         Moves::FigureEight({ centreX - 115.0f, top + 175.0f }, 105.0f, 48.0f, 5200, 0.0f, 11000, 210.0f), { figurePetal, figureOrbit }));
     figurePetal.style = (int)BulletStyle::RED_;
     figurePetal.requiredMotionSegment = 1;
     figureOrbit.style = (int)BulletStyle::BLUE_;
     figureOrbit.requiredMotionSegment = 0;
-    stage.events.push_back(MakeStageSpawn(103000, 1, 0, eType::elf, 48, centreX + 125.0f, top + 160.0f,
+    events.push_back(MakeStageSpawn(103000, 1, 0, eType::elf, 48, centreX + 125.0f, top + 160.0f,
         Moves::FigureEight({ centreX + 115.0f, top + 175.0f }, 105.0f, 48.0f, 5200, PI, 11000, 210.0f), { figurePetal, figureOrbit }));
-    stage.events.push_back(MakeStageSpawn(105000, 4, 550, eType::normal, 1, left - 35.0f, top + 90.0f,
+    events.push_back(MakeStageSpawn(105000, 4, 550, eType::normal, 1, left - 35.0f, top + 90.0f,
         Moves::BezierPass({ left - 35.0f, top + 90.0f }, { left + 65.0f, top + 35.0f },
             { left + 80.0f, Bottom - 80.0f }, { left - 80.0f, Bottom + 30.0f }, 6000)));
-    stage.events.push_back(MakeStageSpawn(105000, 4, 550, eType::normal, 1, right + 35.0f, top + 90.0f,
+    events.push_back(MakeStageSpawn(105000, 4, 550, eType::normal, 1, right + 35.0f, top + 90.0f,
         Moves::BezierPass({ right + 35.0f, top + 90.0f }, { right - 65.0f, top + 35.0f },
             { right - 80.0f, Bottom - 80.0f }, { right + 80.0f, Bottom + 30.0f }, 6000)));
 
-    // 116-120s：停止生成，并将仍在场的非 Boss 敌人切换为自然离场状态。
-    SpawnEvent clearSignal;
-    clearSignal.startTime = 116000;
-    clearSignal.forceExitExisting = true;
-    stage.events.push_back(clearSignal);
+    // 116s：停止生成并让场上非 Boss 敌人离场；清场后继续到 Boss 事件。
+    StageEvent retreat;
+    retreat.frame = GameFramesFromMilliseconds(117000);
+    retreat.type = StageEventType::RetreatNonBossEnemies;
+    events.push_back(retreat);
 
-    waveQueue.push(stage);
+    StageEvent waitForClear;
+    waitForClear.frame = retreat.frame;
+    waitForClear.order = 1;
+    waitForClear.type = StageEventType::WaitForEnemiesClear;
+    events.push_back(waitForClear);
 }
 
 void Game::InitNormalLevels() {
-    InitStageDemo();
-    AddSanaeBossWave(false);
+    std::vector<StageEvent> events;
+    InitStageDemo(events);
+    AddSanaeBossEvent(events, false,
+        GameFramesFromMilliseconds(117000 + 2500));
+    stageTimeline.Load(std::move(events));
 }
 void Game::InitAILevel() {
-    AddSanaeBossWave(true);
+    std::vector<StageEvent> events;
+    AddSanaeBossEvent(events, true, GameFramesFromMilliseconds(2500));
+    stageTimeline.Load(std::move(events));
 }
 
-void Game::AddSanaeBossWave(bool aiMode) {
-    waveData waveBoss;
-    waveBoss.waveDelay = 2000;
-
-    SpawnEvent bossEvent;
-    bossEvent.startTime = 500;
-    bossEvent.count = 1;
-    bossEvent.interval = 0;
-    bossEvent.type = eType::boss;
-    bossEvent.bossInstance = CreateSanaeBoss(aiMode);
-    waveBoss.events.push_back(bossEvent);
-    waveQueue.push(waveBoss);
-}
-
-void Game::ClearQueuedWaves() {
-    // waveQueue 尚未交给 EnemyManager 的 Boss 由这里拥有；模式切换时必须一并释放。
-    std::set<Boss*> queuedBosses;
-    while (!waveQueue.empty()) {
-        waveData wave = waveQueue.front();
-        waveQueue.pop();
-        for (const auto& event : wave.events) {
-            if (event.bossInstance != nullptr) queuedBosses.insert(event.bossInstance);
-        }
-    }
-    for (Boss* boss : queuedBosses) delete boss;
-    nextWave = waveData();
+void Game::AddSanaeBossEvent(std::vector<StageEvent>& events, bool aiMode, std::uint64_t frame) {
+    StageEvent bossEvent;
+    bossEvent.frame = frame;
+    bossEvent.type = StageEventType::Callback;
+    bossEvent.callback = [this, aiMode]() {
+        Boss* boss = CreateSanaeBoss(aiMode);
+        if (boss == nullptr) return;
+        boss->alive = true;
+        E.addEnemy(boss);
+    };
+    events.push_back(std::move(bossEvent));
 }
 
 Boss* Game::CreateSanaeBoss(bool aiMode) {
@@ -710,7 +741,7 @@ void Game::Barrages() {
 	Barr.update();
 }
 
-void Game::Enemies() {
+void Game::Enemies(std::uint64_t frame) {
 	auto& enemies = E.getList();
 	for (auto it = enemies.begin(); it != enemies.end(); ) {
 		Enemy* e = *it;
@@ -724,7 +755,7 @@ void Game::Enemies() {
 			++it;
 		}
 	}
-	E.moveEnemy();
+	E.moveEnemy(frame);
 	E.drawAll();
 	E.outBound();
 }
@@ -1263,13 +1294,11 @@ void Game::InitNormalPlay() {
 	items.clear();
 	// 清空符卡弹幕
 	ClearSpellBarrages();
-	// 重置关卡队列
-	ClearQueuedWaves();
-	currentWave.clear();
+	stageTimeline.Clear();
+	worldFrame = 0;
 	InitNormalLevels();
 	// 重置其他状态
 	enemyFire = false;
-	wait = false;
 	isSpellActive = false;
 	bulletLevel = 1;
 	// 重新初始化背景和音效
@@ -1290,11 +1319,10 @@ void Game::InitRLTraining() {
 	}
 	items.clear();
 	ClearSpellBarrages();
-	ClearQueuedWaves();
-	currentWave.clear();
+	stageTimeline.Clear();
+	worldFrame = 0;
 
 	enemyFire = false;
-	wait = false;
 	isSpellActive = false;
 	BG.init();
 	Effects.init();
@@ -1373,13 +1401,11 @@ void Game::InitAIDemo() {
 	items.clear();
 	// 清空符卡弹幕
 	ClearSpellBarrages();
-	// 清空关卡队列
-	ClearQueuedWaves();
-	currentWave.clear();
+	stageTimeline.Clear();
+	worldFrame = 0;
 	InitAILevel();
 	// 重置状态
 	enemyFire = false;
-	wait = false;
 	isSpellActive = false;
 	// 初始化背景
 	BG.init();

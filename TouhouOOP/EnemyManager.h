@@ -4,62 +4,53 @@
 #include "Bullet.h"
 #include "Boss.h"       
 #include "Movement.h"
+#include <cstdint>
 #include <vector>
-#include <map>
-#include <queue>
-#include <list>
 
-struct SpawnEvent {
-	int startTime = 0;        // 波次开始后的延迟
-	int count = 0;            // 生成数量
-	int interval = 0;         // 生成间隔
-	int hp = 0;               // 生命值
-	eType type = eType::normal; // 敌人外观类型
-	float startX = 0, startY = 0; // 起始位置
-	MoveStrategy moveLogic; // 移动策略
-	std::vector<BarrageTask> initTasks; // 初始携带的弹幕任务
-
-	Boss* bossInstance = nullptr;
-	// 波次内的生命周期信号：让当前非 Boss 敌人自然离场，不生成实体。
-	bool forceExitExisting = false;
-	int spawnedCount = 0;
-	DWORD lastSpawnTime = 0;
+// 关卡作者提供的静态刷怪配置。
+// 它只描述“要生成什么”，不保存已生成数量等运行时数据。
+struct SpawnGroupDef {
+	int count = 0;                       // 本组总敌人数
+	int intervalMs = 0;                  // 两只敌人之间的生成间隔，单位毫秒
+	int hp = 0;                           // 每只敌人的生命值
+	eType type = eType::normal;          // normal 普通敌人，elf 精英敌人
+	float startX = 0, startY = 0;        // 每只敌人的出生坐标
+	MoveStrategy moveLogic;              // 敌人出生后使用的移动轨迹
+	std::vector<BarrageTask> initTasks;  // 每只敌人出生时附带的弹幕任务
 };
 
-struct waveData {
-	int waveDelay = 0; // 在开始这一波之前，需要等待多久
-	std::vector<SpawnEvent> events;
-};
+// 将毫秒换算为 60Hz 游戏逻辑帧，向上取整。
+// 例如 500ms 会换算为 30 帧。
+constexpr std::uint64_t GameFramesFromMilliseconds(std::uint64_t milliseconds) {
+	return (milliseconds * 60 + 999) / 1000;
+}
 
 class EnemyManager {
 private:
+	// 正在逐只生成的刷怪组运行时状态。
+	struct PendingSpawnGroup {
+		SpawnGroupDef definition;          // 该组的静态配置
+		int spawnedCount = 0;              // 已生成数量
+		std::uint64_t nextSpawnFrame = 0;   // 下一只应生成的世界帧
+		std::uint64_t intervalFrames = 1;   // 生成间隔换算后的帧数
+	};
 
-	std::vector<Enemy*> enemyList;
-	std::queue<SpawnEvent> eventQueue;
-	std::list<SpawnEvent> activeEvents;
-	DWORD waveStartTime = 0;
-
-	unsigned int aliveEnemy;
-	unsigned int enemyIdx;
-	bool clear;
-
-	std::vector<float> currentPosition;
-	int interval = 0;
-
-	DWORD t1, t2;
-	void beginExitForExistingEnemies();
+	std::vector<Enemy*> enemyList; // 已创建并由 EnemyManager 负责释放的敌人
+	std::vector<PendingSpawnGroup> pendingSpawnGroups; // 尚未生成完毕的刷怪组
+	unsigned int aliveEnemy; // 旧统计字段；清场判定使用容器状态，不依赖此计数
+	void updateSpawns(std::uint64_t worldFrame);
 
 public:
 	EnemyManager();
 	~EnemyManager();
 
-	void updateSpawns();
-	void createEnemy(const SpawnEvent& ev);
-	void moveEnemy();
+	void scheduleSpawnGroup(const SpawnGroupDef& group, std::uint64_t worldFrame);
+	void createEnemy(const SpawnGroupDef& group);
+	void moveEnemy(std::uint64_t worldFrame);
 	void InitRound();
 	bool checkEnemyClear();
 	void clearEnemy();
-	void setWave(const std::vector<SpawnEvent>& event);
+	void retreatNonBossEnemies();
 	void drawAll(); 
 	void outBound();
 
@@ -72,10 +63,11 @@ public:
 			delete enemy;
 		}
 		enemyList.clear();
+		pendingSpawnGroups.clear();
 	}
 
 	void addEnemy(Enemy* newEnemy) {
-		enemyList.push_back(newEnemy);
+		if (newEnemy != nullptr) enemyList.push_back(newEnemy);
 	}
 
 	struct DropReq {
